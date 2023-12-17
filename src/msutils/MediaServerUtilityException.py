@@ -1,0 +1,2 @@
+class MediaServerUtilityException(Exception):
+    pass
