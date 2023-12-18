@@ -6,6 +6,7 @@ import subprocess as proc
 import sys
 
 import msutils as msu
+# from msutils import MovieSections
 
 FFMPEG_FILE = "ffmpeg"
 INPUTS_FILE_NAME = "ffmpeg_inputs_file.txt"
@@ -13,7 +14,7 @@ TEMP_FILE = "temp_output.mkv"
 
 if "__main__" == __name__:
     # SETUP LOGGER BEFORE IMPORTS SO THEY CAN USE THESE SETTINGS
-    log.basicConfig(filename="remove-commercials.log",
+    log.basicConfig(filename="remove-freezes-and-commercials.log",
                     filemode="w",
                     format="%(asctime)s %(filename)15.15s %(funcName)15.15s %(levelname)5.5s %(lineno)4.4s %(message)s",
                     datefmt="%Y%m%d-%H:%M:%S"
@@ -21,44 +22,142 @@ if "__main__" == __name__:
     log.getLogger().setLevel(log.DEBUG)
 
 
-def add_chapter_to_inputs(filename: str, chapter_text: [str]) -> str:
-    time_line = chapter_text[0]
-    start_idx = time_line.find(" start ")
-    end_idx = time_line.find(" end ")
+def temp_results_file_name(file_name: str) -> str:
+    extension: str = file_name[-4:]
+    if extension != ".mp4" and extension != ".mkv":
+        raise msu.MediaServerUtilityException(f"{extension} is not a valid file type to transcode. (.mp4 or .mkv only)")
 
-    if start_idx < 0 or end_idx < 0:
-        raise RuntimeError(f"Cannot find start/end times in: {time_line}")
-
-    start_time = time_line[start_idx+7:].split(",")[0]
-    end_time = time_line[end_idx+5:]
-
-    result = f"file '{filename}'\ninpoint {start_time}\noutpoint {end_time}"
-    return result
+    return f"temp-output{extension}"
 
 
-def remove_commercials(inputs_file_name: str, temp_results_file_name: str):
+# def remove_commercials(inputs_file_name: str, temp_results_file_name: str):
+def remove_gaps(gaps: msu.MovieSections):
+    gaps.create_input_file_for_video_gaps(INPUTS_FILE_NAME)
+
     ffmpeg_args = [FFMPEG_FILE,
                    "-y",
                    "-safe", "0",
                    "-f", "concat",
-                   "-i", inputs_file_name,
+                   "-i", INPUTS_FILE_NAME,
                    "-c", "copy",
-                   "-c:s", "text",
-                   temp_results_file_name
+                   "-c:s", "copy",
+                   temp_results_file_name(gaps.file_name)
                    ]
     print()
-    print("REMOVING COMMERCIALS ...")
+    print("... REMOVING COMMERCIALS AND FREEZES ...")
     print()
-    log.debug(f"Remove commercials from latest video file.")
+    print(ffmpeg_args)
+    log.debug(f"Removing gaps (commercials and freezes) from latest video file.")
     proc.run(ffmpeg_args)
+    log.debug(f"Gap removal complete.")
+
+    path.Path.unlink(path.Path(INPUTS_FILE_NAME))
 
 
-def examine_file(file_name: str, inputs_file_name: str) -> [(float, float)]:
-    duration: float = -1
-    chapters_sect: bool = False
-    chapters_done: bool = False
-    current_chapter_text: [str] = []
-    delete_some_video = False
+def find_duration(text: [str]) -> float:
+    for line in text:
+        if msu.is_ffmpeg_duration_line(line):
+            return_val: float = msu.get_ffmpeg_duration(line)
+            log.debug(f"Movie length: {return_val} seconds.")
+            return return_val
+
+    return 0
+
+
+def find_movie_chapters(text: [str]) -> [msu.MovieChapter]:
+    chapters: [msu.MovieChapter] = []
+    i = 0
+
+    for i, line in enumerate(text):
+        if msu.is_ffmpeg_chapter_header(line):
+            break
+
+    for j in range(i+1, len(text), 3):
+        if msu.is_ffmpeg_chapter(text[j]):
+            curr_chapter: msu.MovieChapter = msu.MovieChapter([text[j], text[j+1], text[j+2]])
+            chapters.append(curr_chapter)
+            log.debug(f"Movie chapter found: {curr_chapter.title}")
+        else:
+            break
+
+    return chapters
+
+
+def is_freeze_data(output) -> bool:
+    idx = output.find("lavfi.freezedetect.freeze_")
+    return idx >= 0
+
+
+def get_freeze_location(output: str) -> float:
+    broken_line: [str] = output.split(":")
+    if len(broken_line) < 2:
+        raise msu.MediaServerUtilityException(f"Invalid freeze line supplied to get_freeze_location. {output}")
+    return float(broken_line[1].strip())
+
+
+def process_freeze_output(output) -> (float | None, float | None):
+    start_info: bool = output.find("lavfi.freezedetect.freeze_start") > 0
+    end_info: bool = output.find("lavfi.freezedetect.freeze_end") > 0
+
+    if start_info:
+        # FOUND FREEZE START TIME
+        return get_freeze_location(output), None
+    elif end_info:
+        # FOUND FREEZE END TIME
+        return None, get_freeze_location(output)
+
+    # FREEZE DURATION OR OTHER FREEZE INFO THAT WE DON'T NEED.
+    return None, None
+
+
+def look_for_freezes_and_progress(output, duration: float = 0.0) -> [msu.MovieSection]:
+    found_freezes: [msu.MovieSection] = []
+    current_freeze_start: float | None = None
+
+    for ffmpeg_output in output:
+        # MONITOR FOR A FREEZE
+        if is_freeze_data(ffmpeg_output):
+            (start, end) = process_freeze_output(ffmpeg_output)
+
+            # CHECK FOR EXCEPTIONS
+            if start is not None and end is not None:
+                raise msu.MediaServerUtilityException(f"Freeze start and stop received simultaneously.")
+            if start is not None:
+                if current_freeze_start is not None:
+                    raise msu.MediaServerUtilityException(f"Two consecutive freeze starts encountered. End expected.")
+                # FREEZE START DATA RECEIVED
+                current_freeze_start = start
+
+            elif end is not None:
+                # FREEZE END DATA RECEIVED
+                freeze_info: msu.MovieSection = msu.MovieSection(current_freeze_start, end)
+                found_freezes.append(freeze_info)
+                log.debug(f"Freeze found from {current_freeze_start} to {end}")
+                current_freeze_start = None
+
+        # MONITOR FOR PROGRESS UPDATES
+        elif msu.is_ffmpeg_update(ffmpeg_output):
+            current_loc = msu.ffmpeg_get_current_time(ffmpeg_output)
+            percent_progress = msu.pretty_progress(current_loc, duration)
+            print(f"Progress: {percent_progress}", end="\r")
+
+    print(f"Progress: 100.0%")
+    return found_freezes
+
+
+def ffmpeg_output_before_transcode(output) -> [str]:
+    pre_transcode_text: [str] = []
+    started_transcoding: bool = False
+    while not started_transcoding:
+        ffmpeg_output = output.readline()
+        pre_transcode_text.append(ffmpeg_output)
+        started_transcoding = msu.is_ffmpeg_update(ffmpeg_output)
+
+    return pre_transcode_text
+
+
+def find_commercials_and_freezes(file_name: str) -> msu.MovieSections:
+    sections_to_remove: msu.MovieSections = msu.MovieSections(file_name)
 
     ffmpeg_args = [FFMPEG_FILE,
                    "-i", file_name,
@@ -68,49 +167,47 @@ def examine_file(file_name: str, inputs_file_name: str) -> [(float, float)]:
                    "-"
                    ]
 
-    with open(inputs_file_name, "w") as inputs_file:
-        with proc.Popen(ffmpeg_args, text=True, stderr=proc.PIPE) as process:
-            try:
-                for output_line in process.stderr:
-                    to_log = output_line.strip()
-                    log.debug(to_log)
+    with proc.Popen(ffmpeg_args, text=True, stderr=proc.PIPE) as process:
+        try:
+            pre_transcode_text: [str] = ffmpeg_output_before_transcode(process.stderr)
+            duration: float = find_duration(pre_transcode_text)
+            chapters: [msu.MovieChapter] = find_movie_chapters(pre_transcode_text)
+            for movie_ch in filter(lambda ch: ch.title == "Advertisement", chapters):
+                sections_to_remove.add_section(movie_ch.section)
 
-                    if msu.is_ffmpeg_update(output_line):
-                        current_loc = msu.ffmpeg_get_current_time(output_line)
-                        percent_progress = msu.pretty_progress(current_loc, duration)
-                        print(f"Progress: {percent_progress}", end="\r")
-                        log.debug(f"Progress: {percent_progress}")
+            freezes: [msu.MovieSection] = look_for_freezes_and_progress(process.stderr, duration)
+            for f in freezes:
+                sections_to_remove.add_section(f)
 
-                    elif duration < 0:
-                        if msu.is_ffmpeg_duration_line(output_line):
-                            duration = msu.get_ffmpeg_duration(output_line)
+            print(sections_to_remove.section_list)
 
-                    elif not chapters_done:
-                        if not chapters_sect:
-                            chapters_sect = msu.is_ffmpeg_chapter_header(output_line)
+        except msu.MediaServerUtilityException as exc:
+            print(exc)
+            log.exception(exc)
 
-                        else:
-                            current_chapter_text.append(output_line)
-                            current_line_count = len(current_chapter_text)
-                            if 1 == current_line_count:
-                                chapters_done = not msu.is_ffmpeg_chapter(output_line)
-                            elif 3 == current_line_count:
-                                if msu.is_ffmpeg_chapter_a_commercial(current_chapter_text):
-                                    delete_some_video = True
-                                else:
-                                    input_text = add_chapter_to_inputs(file_name, current_chapter_text)
-                                    inputs_file.write(input_text)
-                                # look for next chapter
-                                current_chapter_text = []
+    return sections_to_remove
 
-            except msu.MediaServerUtilityException as exc:
-                print(exc)
-                log.exception(exc)
-                process.kill()
-                process.wait()
-                sys.exit(1)
 
-    return delete_some_video
+def replace_file(orig_file_name: str, replace_with_file_name: str) -> None:
+    backup_file_name: str = f"{orig_file_name}.backup"
+
+    # REPLACE ORIGINAL FILE WITH NEW, BETTER ONE
+    # 1 -> move original to .backup
+    sh.move(orig_file_name, backup_file_name)
+    # 2 -> move temp to original
+    sh.move(replace_with_file_name, orig_file_name)
+    # 3 -> remove backup file
+    path.Path.unlink(path.Path(backup_file_name))
+
+
+def video_gap_removal(file_name: str) -> None:
+    gaps: msu.MovieSections = find_commercials_and_freezes(file_name)
+    print(gaps)
+    print(len(gaps.section_list))
+    if len(gaps.section_list) > 0:
+        gaps.create_input_file_for_video_gaps(INPUTS_FILE_NAME)
+        remove_gaps(gaps)
+        replace_file(file_name, temp_results_file_name(gaps.file_name))
 
 
 def main():
@@ -121,24 +218,8 @@ def main():
     if len(vals) != 1:
         print("Exactly one argument (file-name) expected.")
         sys.exit(1)
-
-    found_commercials = examine_file(file_to_process, INPUTS_FILE_NAME)
-    if found_commercials:
-        remove_commercials(INPUTS_FILE_NAME, TEMP_FILE)
-
-        backup_file_name: str = f"{file_to_process}.backup"
-
-        # RENAME FILES
-        # 1 -> move original to .bak
-        sh.move(file_to_process, backup_file_name)
-        # 2 -> move temp to original
-        sh.move(TEMP_FILE, file_to_process)
-
-        # 3 -> remove backup file
-        path.Path.unlink(path.Path(backup_file_name))
-
-    # remove inputs file
-    path.Path.unlink(path.Path(INPUTS_FILE_NAME))
+    else:
+        video_gap_removal(file_to_process)
 
 
 if "__main__" == __name__:

@@ -1,4 +1,6 @@
 from .MediaServerUtilityException import MediaServerUtilityException
+from .MovieSections import MovieSection, MovieSections
+from .MovieChapter import MovieChapter
 
 def text_to_secs(text: str) -> float:
     """ Convert string such as 01:14:30.54 (hh:mm:ss.xx) into 4470.54 """
@@ -19,7 +21,7 @@ def is_ffmpeg_chapter_header(text: str) -> bool:
     return text.strip() == "Chapters:"
 
 
-def is_ffmpeg_duration_line(text:str) -> bool:
+def is_ffmpeg_duration_line(text: str) -> bool:
     idx = text.find("Duration: ")
     return idx == 2
 
