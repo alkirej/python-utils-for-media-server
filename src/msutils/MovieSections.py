@@ -1,8 +1,9 @@
 import collections as coll
 from msutils.MediaServerUtilityException import MediaServerUtilityException
 
-MovieSection = coll.namedtuple("MovieSection", "start end")
+MovieSection = coll.namedtuple("MovieSection", "start end comment")
 
+FREEZE_FUDGE_FACTOR: float = 0.75
 
 def is_overlap(sect_one: MovieSection, sect_two: MovieSection) -> bool:
     # Partial overlaps.  One section starts within the other's timeframe
@@ -29,23 +30,26 @@ def combine(sect_one: MovieSection, sect_two: MovieSection) -> MovieSection:
 
     new_start = min(sect_one.start, sect_two.start)
     new_end = max(sect_one.end, sect_two.end)
-    return MovieSection(new_start, new_end)
+    new_comment = f"{sect_one.comment} - {sect_two.comment}"
+    return MovieSection(new_start, new_end, new_comment)
 
 
 class MovieSections:
-    def __init__(self, movie_file_name: str):
+    def __init__(self, movie_file_name: str, list_name: str = ""):
         self.section_list: list = []
         self.file_name = movie_file_name
+        self.list_name = list_name
 
     def add_section(self, sect: MovieSection):
-        if sect.start > sect.end:
-            raise MediaServerUtilityException(f"({sect.start},{sect.end}) is an invalid movie section.  "
+        new_sect: MovieSection = MovieSection(float(sect.start), float(sect.end), sect.comment)
+        if new_sect.start > new_sect.end:
+            raise MediaServerUtilityException(f"({new_sect.start},{new_sect.end}) is an invalid movie section.  "
                                               + "It Ends before it starts."
                                               )
         if len(self.section_list) == 0:
-            self.section_list.append(sect)
+            self.section_list.append(new_sect)
         else:
-            self._insert(sect)
+            self._insert(new_sect)
 
     def _consolidate_sections(self) -> None:
         consolidated_list = []
@@ -82,16 +86,100 @@ class MovieSections:
             self.section_list.append(new_sect)
             self.section_list.sort()
 
+    def ms_union(self, ms2):
+        if self.file_name != ms2.file_name:
+            raise MediaServerUtilityException(
+                f"To union two MovieSections objects, the file_names must be the same. "
+                f"{self.file_name} != {ms2.file_name}"
+                )
+
+        return_val = MovieSections(self.file_name)
+
+        for ms in self.section_list:
+            return_val.add_section(ms)
+
+        for ms in ms2.section_list:
+            return_val.add_section(ms)
+
+        return return_val
+
+    def __or__(self, ms2):
+        return self.ms_union(ms2)
+
+    def _single_intersect(self, list_name: str, section: MovieSection) -> [MovieSection]:
+        return_val: [MovieSection] = []
+        for my_section in self.section_list:
+            if is_overlap(section, my_section):
+                new_start: float = max(section.start, my_section.start)
+                new_end: float = min(section.end, my_section.end)
+                new_section: MovieSection = MovieSection(
+                        new_start,
+                        new_end,
+                        f"{list_name}({section.start}-{section.end}) & {self.list_name}({my_section.start}-{my_section.end})"
+                        )
+                return_val.append(new_section)
+
+        return return_val
+
+    def ms_intersection(self, ms2):
+        if self.file_name != ms2.file_name:
+            raise MediaServerUtilityException(f"To intersect two MovieSections objects, "
+                                              f"the file_names must be the same. {self.file_name}"
+                                              f" != {ms2.file_name}"
+                                              )
+        return_val = MovieSections(self.file_name)
+        for section in ms2.section_list:
+            matches: [MovieSection] = self._single_intersect(ms2.list_name, section)
+            for m in matches:
+                return_val.add_section(m)
+
+        return return_val
+
+    def __and__(self, ms2):
+        return self.ms_intersection(ms2)
+
+    def total_time(self) -> float:
+        return_val: float = 0
+
+        for sect in self.section_list:
+            dur: float = sect.end - sect.start
+            return_val += dur + (2 * FREEZE_FUDGE_FACTOR)
+
+        return return_val
+
     def create_input_file_for_video_gaps(self, inputs_file_name: str):
         with open(inputs_file_name, "w") as fd:
             first_gap: MovieSection = self.section_list[0]
             if first_gap.start > 0:
-                fd.write(f"file '{self.file_name}'\ninpoint 0.0\noutpoint {first_gap.start}\n")
+                self.section_header(fd)
+                fd.write(f"inpoint 0.0\n")  # No fudging on start.
+                self.outpoint(fd, first_gap.start)
+                self.section_footer(fd, first_gap.comment)
 
             prev_gap = first_gap
             for gap in self.section_list:
-                if (gap == first_gap):
+                if gap == first_gap:
                     continue
-                fd.write(f"file '{self.file_name}'\ninpoint {prev_gap.end}\noutpoint {gap.start}\n")
+                self.section_header(fd)
+                self.inpoint(fd, prev_gap.end)
+                self.outpoint(fd, gap.start)
+                self.section_footer(fd, gap.comment)
                 prev_gap = gap
-            fd.write(f"file '{self.file_name}'\ninpoint {prev_gap.end}\n")
+
+            self.section_header(fd)
+            self.inpoint(fd, prev_gap.end)
+
+    def section_header(self, fd) -> None:
+        fd.write(f"file '{self.file_name}'\n")
+
+    @staticmethod
+    def inpoint(fd, time) -> None:
+        fd.write(f"inpoint {time + FREEZE_FUDGE_FACTOR}\n")
+
+    @staticmethod
+    def outpoint(fd, time) -> None:
+        fd.write(f"outpoint {time - FREEZE_FUDGE_FACTOR}\n")
+
+    @staticmethod
+    def section_footer(fd, comment: str) -> None:
+        fd.write(f"# {comment.strip().upper()} was removed.\n")

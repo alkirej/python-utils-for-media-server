@@ -2,6 +2,20 @@ from .MediaServerUtilityException import MediaServerUtilityException
 from .MovieSections import MovieSection, MovieSections
 from .MovieChapter import MovieChapter
 
+
+class Color:
+    PURPLE = '\033[1;35;48m'
+    CYAN = '\033[1;36;48m'
+    BOLD = '\033[1;37;48m'
+    BLUE = '\033[1;34;48m'
+    GREEN = '\033[1;32;48m'
+    YELLOW = '\033[1;33;48m'
+    RED = '\033[1;31;48m'
+    BLACK = '\033[1;30;48m'
+    UNDERLINE = '\033[4;37;48m'
+    END = '\033[1;37;0m'
+
+
 def text_to_secs(text: str) -> float:
     """ Convert string such as 01:14:30.54 (hh:mm:ss.xx) into 4470.54 """
     if len(text) < 11 or text[2] != ":" or text[5] != ":":
@@ -31,24 +45,14 @@ def get_ffmpeg_duration(text: str) -> float:
     return text_to_secs(dur_in_text)
 
 
-def is_ffmpeg_chapter_a_commercial(chapter_text: [str]) -> bool:
-    if len(chapter_text) != 3:
-        raise MediaServerUtilityException(f"{chapter_text} is an invalid chapter from ffmpeg.")
-
-    title_line = chapter_text[2].strip()
-    title = title_line.split(":")
-    return len(title) > 1 and title[1].strip() == "Advertisement"
-
-
 def is_ffmpeg_chapter(text: str) -> bool:
     idx = text.find("Chapter #")
     return idx >= 0
 
 
 def pretty_progress(current: float, total: float) -> str:
-    progress = current / total
-    percent = round(progress * 1000)
-    return "%5.1f%%" % (percent/10)
+    progress: float = 100 * current / total
+    return f"{Color.GREEN}{progress:5.1f}%{Color.END} ({current:,.1f} of {Color.CYAN}{total:,.1f}{Color.END})"
 
 
 def is_ffmpeg_update(text: str) -> bool:
