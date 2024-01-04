@@ -3,15 +3,17 @@ import logging as log
 import optparse as op
 import os
 import pathlib as path
-import shutil as sh
 import subprocess as proc
 import sys
 
 import msutils as msu
 
-FFMPEG_FILE = "ffmpeg-local-copy-2"
+FFMPEG_FILE = "ffmpeg"
 INPUTS_FILE_NAME = "ffmpeg_inputs_file.txt"
 TEMP_FILE = "temp_output.mkv"
+
+NO_GAPS_FIELD = "checked-for-gaps"
+NO_GAPS_VALUE = "Yes"
 
 if "__main__" == __name__:
     # SETUP LOGGER BEFORE IMPORTS SO THEY CAN USE THESE SETTINGS
@@ -20,55 +22,44 @@ if "__main__" == __name__:
                     format="%(asctime)s %(filename)15.15s %(funcName)15.15s %(levelname)5.5s %(lineno)4.4s %(message)s",
                     datefmt="%Y%m%d-%H:%M:%S"
                     )
-    log.getLogger().setLevel(log.DEBUG)
-
-
-def temp_results_file_name(file_name: str) -> str:
-    extension: str = file_name[-4:]
-    if extension != ".mp4" and extension != ".mkv":
-        raise msu.MediaServerUtilityException(f"{extension} is not a valid file type to transcode. (.mp4 or .mkv only)")
-
-    return f"temp-output{extension}"
+    log.getLogger().setLevel(log.INFO)
 
 
 def remove_gaps(gaps: msu.MovieSections):
     gaps.create_input_file_for_video_gaps(INPUTS_FILE_NAME)
+    output_file_name: str = msu.temp_results_file_name(gaps.file_name)
 
     ffmpeg_args = [FFMPEG_FILE,
                    "-y",
+                   "-threads", "3",
                    "-safe", "0",
                    "-f", "concat",
                    "-i", INPUTS_FILE_NAME,
                    "-c", "copy",
                    "-c:s", "copy",
-                   temp_results_file_name(gaps.file_name)
+                   "-threads", "3",
+                   output_file_name
                    ]
     print()
-    print(f"{msu.Color.RED}... REMOVE COMMERCIALS AND FREEZES ...{msu.Color.END}")
-    print(f"{msu.Color.RED}--------------------------------------{msu.Color.END}")
-    print(f"Removing {msu.Color.GREEN}{gaps.total_time():.1f}{msu.Color.END} seconds from movie.")
-    log.debug(f"Removing {gaps.total_time():.1f} seconds of gaps (commercials and freezes) from {gaps.file_name}.")
+    print(f"{msu.Color.BOLD}{msu.Color.RED}*** REMOVE COMMERCIALS AND FREEZES ***{msu.Color.END}")
+    print(f"Removing {msu.Color.BOLD}{msu.Color.GREEN}{gaps.total_time():.1f}{msu.Color.END} seconds from movie.")
+    log.info(f"Removing {gaps.total_time():.1f} seconds of gaps (commercials and freezes) from {gaps.file_name}.")
+    if gaps.total_time() > 15:
+        for x in gaps.section_list:
+            print(f"   ...   {msu.Color.BOLD}{msu.Color.CYAN}{x.start:>8,.1f}{msu.Color.END}-{x.end:>8,.1f}: " +
+                  f"{msu.Color.BOLD}{msu.Color.YELLOW}{x.comment}{msu.Color.END}"
+                  )
 
     current: float = 0.0
     with proc.Popen(ffmpeg_args, text=True, stderr=proc.PIPE) as process:
         for line in process.stderr:
             if msu.is_ffmpeg_update(line):
                 current = msu.ffmpeg_get_current_time(line)
-                print(f"Removal Progress: {msu.Color.CYAN}{current:,.1f}{msu.Color.END}", end="\r")
+                print(f"Removal Progress: {msu.Color.BOLD}{msu.Color.CYAN}{current:,.1f}{msu.Color.END}", end="\r")
 
-    print(f"Removal Progress: {msu.Color.CYAN}{current:,.1f}{msu.Color.END}")
-    log.debug(f"Gap removal complete for {gaps.file_name}.")
+    print(f"Removal Progress: {msu.Color.BOLD}{msu.Color.CYAN}{current:,.1f}{msu.Color.END}")
+    log.info(f"Gap removal complete for {gaps.file_name}.")
     path.Path.unlink(path.Path(INPUTS_FILE_NAME))
-
-
-def find_duration(text: [str]) -> float:
-    for line in text:
-        if msu.is_ffmpeg_duration_line(line):
-            return_val: float = msu.get_ffmpeg_duration(line)
-            log.debug(f"Movie length: {return_val:.1f} seconds.")
-            return return_val
-
-    return 0
 
 
 def find_movie_chapters(text: [str]) -> [msu.MovieChapter]:
@@ -83,9 +74,9 @@ def find_movie_chapters(text: [str]) -> [msu.MovieChapter]:
         if msu.is_ffmpeg_chapter(text[j]):
             curr_chapter: msu.MovieChapter = msu.MovieChapter([text[j], text[j+1], text[j+2]])
             chapters.append(curr_chapter)
-            log.debug(
-                f"Movie chapter found: {curr_chapter.title} ({curr_chapter.section.start:.1f}-{curr_chapter.section.end:.1f})"
-                      )
+            log.info(f"Movie chapter found: {curr_chapter.title} ({curr_chapter.section.start:.1f}-" +
+                     f"{curr_chapter.section.end:.1f})"
+                     )
         else:
             break
 
@@ -196,41 +187,31 @@ def look_for_freezes_and_progress(file_name: str, output, duration: float = 0.0)
         elif msu.is_ffmpeg_update(ffmpeg_output):
             current_loc = msu.ffmpeg_get_current_time(ffmpeg_output)
             percent_progress = msu.pretty_progress(current_loc, duration)
-            print(f"Search Progress: {msu.Color.GREEN}{percent_progress}{msu.Color.END}", end="\r")
+            print(f"Search Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}", end="\r")
 
     percent_progress = msu.pretty_progress(duration, duration)
-    print(f"Search Progress: {msu.Color.GREEN}{percent_progress}{msu.Color.END}")
+    print(f"Search Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}")
     return found_video_freezes & found_silences
-
-
-def ffmpeg_output_before_transcode(output) -> [str]:
-    pre_transcode_text: [str] = []
-    started_transcoding: bool = False
-    while not started_transcoding:
-        ffmpeg_output = output.readline()
-        pre_transcode_text.append(ffmpeg_output)
-        started_transcoding = msu.is_ffmpeg_update(ffmpeg_output)
-
-    return pre_transcode_text
 
 
 def find_commercials_and_freezes(file_name: str) -> msu.MovieSections:
     commercials: msu.MovieSections = msu.MovieSections(file_name)
 
     ffmpeg_args = [FFMPEG_FILE,
+                   "-threads", "5",
                    "-i", file_name,
                    "-vf", "freezedetect=n=0.001",
                    "-map", "0:v:0",
                    "-af", "silencedetect",
-                   "-map", "0:a:0",
+                   "-map", "0:a:0?",
                    "-f", "null",
-                   "-"
+                   "-",
                    ]
 
     with proc.Popen(ffmpeg_args, text=True, stderr=proc.PIPE) as process:
         try:
-            pre_transcode_text: [str] = ffmpeg_output_before_transcode(process.stderr)
-            duration: float = find_duration(pre_transcode_text)
+            pre_transcode_text: [str] = msu.ffmpeg_output_before_transcode(process.stderr)
+            duration: float = msu.find_duration(pre_transcode_text)
             chapters: [msu.MovieChapter] = find_movie_chapters(pre_transcode_text)
             for movie_ch in filter(lambda ch: ch.title == "Advertisement", chapters):
                 commercials.add_section(movie_ch.section)
@@ -240,57 +221,60 @@ def find_commercials_and_freezes(file_name: str) -> msu.MovieSections:
         except msu.MediaServerUtilityException as exc:
             print(exc)
             log.exception(exc)
+            process.kill()
+            process.wait()
+            raise exc
 
-    log.debug("COMMERCIALS")
-    for x in commercials.section_list:
-        log.debug(x)
-    log.debug("FREEZES")
-    for x in vid_freezes.section_list:
-        log.debug(x)
-
-    log.debug("FINAL RESULTS")
     all_gaps: msu.MovieSections = commercials | vid_freezes
-    for x in all_gaps.section_list:
-        log.debug(x)
-
     return all_gaps
 
 
-def replace_file(orig_file_name: str, replace_with_file_name: str) -> None:
-    print(f"{msu.Color.BLUE}Replace{msu.Color.END} {orig_file_name} with the new, updated version.")
-    log.debug(f"Replace {orig_file_name} with the new, updated version.")
-    backup_file_name: str = f"{orig_file_name}.backup"
-    log.debug(f"Replace {orig_file_name} with the new, updated version.")
-    # REPLACE ORIGINAL FILE WITH NEW, BETTER ONE
-    # 1 -> move original to .backup
-    sh.move(orig_file_name, backup_file_name)
-    # 2 -> move temp to original
-    sh.move(replace_with_file_name, orig_file_name)
-    # 3 -> remove backup file
-    path.Path.unlink(path.Path(backup_file_name))
-    log.debug(f"Completed update of {orig_file_name}.")
+def gaps_already_removed(file_name: str) -> bool:
+    attr_names = (attr for attr in os.listxattr(file_name) if attr.startswith("user."))
+    for n in attr_names:
+        if n == f"user.{NO_GAPS_FIELD}" and NO_GAPS_VALUE == str(os.getxattr(file_name, n), "UTF-8"):
+            log.info(f"{file_name} has already been processed by gap remover.")
+            print(f"{file_name} has already been processed by gap remover.")
+            return True
+    return False
 
 
 def video_gap_removal(file_name: str) -> None:
+    if gaps_already_removed(file_name):
+        return
+
     current_timestamp: dt.datetime = dt.datetime.now()
-    print(f"\n{current_timestamp.strftime('%m/%d/%Y')} {msu.Color.PURPLE}{current_timestamp.strftime('%H:%M:%S')}{msu.Color.END}")
+    print(f"\n{current_timestamp.strftime('%m/%d/%Y')} " +
+          f"{msu.Color.BOLD}{msu.Color.PURPLE}{current_timestamp.strftime('%H:%M:%S')}{msu.Color.END}"
+          )
 
     log.info(f"Removing gaps in: {file_name}")
     print(f"Removing gaps in: {msu.Color.YELLOW}{file_name}{msu.Color.END}")
 
-    gaps: msu.MovieSections = find_commercials_and_freezes(file_name)
+    try:
+        gaps: msu.MovieSections = find_commercials_and_freezes(file_name)
+    except msu.MediaServerUtilityException:
+        # Exception should have been logged already.
+        return
 
     if len(gaps.section_list) > 0:
         remove_gaps(gaps)
-        replace_file(file_name, temp_results_file_name(gaps.file_name))
+        msu.replace_file(file_name,
+                         msu.temp_results_file_name(file_name),
+                         [NO_GAPS_FIELD]
+                         )
     else:
-        log.debug(f"Found no gaps to remove in {file_name}.")
+        log.info(f"Found no gaps to remove in {file_name}.")
         print(f"Found no gaps to remove in {file_name}.")
+
+    # Mark file as processed.
+    os.setxattr(file_name, f"user.{NO_GAPS_FIELD}", bytes(NO_GAPS_VALUE, "UTF-8"))
 
 
 def walk_dir_removing_gaps(dir_name: str) -> None:
-    for (current_dir, _, files) in os.walk(dir_name):
-        for f in files:
+    for (current_dir, dirs, files) in os.walk(dir_name):
+        dirs.sort()
+        for f in sorted(files):
             if f.endswith(".mp4") or f.endswith(".mkv"):
                 full_path = os.path.join(current_dir, f)
                 video_gap_removal(full_path)
@@ -318,4 +302,3 @@ def main():
 
 if "__main__" == __name__:
     main()
-    # test()
