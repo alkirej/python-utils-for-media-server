@@ -40,13 +40,13 @@ def remove_gaps(gaps: msu.MovieSections):
                    "-threads", "3",
                    output_file_name
                    ]
-    print()
-    print(f"{msu.Color.BOLD}{msu.Color.RED}*** REMOVE COMMERCIALS AND FREEZES ***{msu.Color.END}")
-    print(f"Removing {msu.Color.BOLD}{msu.Color.GREEN}{gaps.total_time():.1f}{msu.Color.END} seconds from movie.")
+    print(f"    {msu.Color.BLUE}{msu.Color.BOLD}Removing{msu.Color.END} "
+          f"{msu.Color.BOLD}{msu.Color.GREEN}{gaps.total_time():.1f}{msu.Color.END} seconds from movie."
+          )
     log.info(f"Removing {gaps.total_time():.1f} seconds of gaps (commercials and freezes) from {gaps.file_name}.")
     if gaps.total_time() > 15:
         for x in gaps.section_list:
-            print(f"   ...   {msu.Color.BOLD}{msu.Color.CYAN}{x.start:>8,.1f}{msu.Color.END}-{x.end:>8,.1f}: " +
+            print(f"        ...   {msu.Color.BOLD}{msu.Color.CYAN}{x.start:>8,.1f}{msu.Color.END}-{x.end:>8,.1f}: " +
                   f"{msu.Color.BOLD}{msu.Color.YELLOW}{x.comment}{msu.Color.END}"
                   )
 
@@ -55,9 +55,9 @@ def remove_gaps(gaps: msu.MovieSections):
         for line in process.stderr:
             if msu.is_ffmpeg_update(line):
                 current = msu.ffmpeg_get_current_time(line)
-                print(f"Removal Progress: {msu.Color.BOLD}{msu.Color.CYAN}{current:,.1f}{msu.Color.END}", end="\r")
+                print(f"        Removing: {msu.Color.BOLD}{msu.Color.CYAN}{current:,.1f}{msu.Color.END}", end="\r")
 
-    print(f"Removal Progress: {msu.Color.BOLD}{msu.Color.CYAN}{current:,.1f}{msu.Color.END}")
+    print(f"        Removing: {msu.Color.BOLD}{msu.Color.CYAN}{current:,.1f}{msu.Color.END}")
     log.info(f"Gap removal complete for {gaps.file_name}.")
     path.Path.unlink(path.Path(INPUTS_FILE_NAME))
 
@@ -129,6 +129,7 @@ def is_silence_data(output: str) -> bool:
 
 
 def look_for_freezes_and_progress(file_name: str, output, duration: float = 0.0) -> [msu.MovieSection]:
+    start_ts: dt.datetime = dt.datetime.now()
     found_video_freezes: msu.MovieSections = msu.MovieSections(file_name, "video")
     found_silences: msu.MovieSections = msu.MovieSections(file_name, "audio")
 
@@ -186,11 +187,11 @@ def look_for_freezes_and_progress(file_name: str, output, duration: float = 0.0)
         # MONITOR FOR PROGRESS UPDATES
         elif msu.is_ffmpeg_update(ffmpeg_output):
             current_loc = msu.ffmpeg_get_current_time(ffmpeg_output)
-            percent_progress = msu.pretty_progress(current_loc, duration)
-            print(f"Search Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}", end="\r")
+            percent_progress = msu.pretty_progress_with_timer(start_ts, current_loc, duration)
+            print(f"    Searching: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}", end="\r")
 
     percent_progress = msu.pretty_progress(duration, duration)
-    print(f"Search Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}")
+    print(f"    {msu.Color.GREEN}Complete: {msu.Color.BOLD}{percent_progress}{msu.Color.END}          ")
     return found_video_freezes & found_silences
 
 
@@ -234,7 +235,9 @@ def gaps_already_removed(file_name: str) -> bool:
     for n in attr_names:
         if n == f"user.{NO_GAPS_FIELD}" and NO_GAPS_VALUE == str(os.getxattr(file_name, n), "UTF-8"):
             log.info(f"{file_name} has already been processed by gap remover.")
-            print(f"{file_name} has already been processed by gap remover.")
+            print(f"    {file_name} {msu.Color.BOLD}{msu.Color.DOUBLE_UNDERLINE}has already been processed "
+                  f"{msu.Color.END}by the gap remover."
+                  )
             return True
     return False
 
@@ -243,13 +246,8 @@ def video_gap_removal(file_name: str) -> None:
     if gaps_already_removed(file_name):
         return
 
-    current_timestamp: dt.datetime = dt.datetime.now()
-    print(f"\n{current_timestamp.strftime('%m/%d/%Y')} " +
-          f"{msu.Color.BOLD}{msu.Color.PURPLE}{current_timestamp.strftime('%H:%M:%S')}{msu.Color.END}"
-          )
-
-    log.info(f"Removing gaps in: {file_name}")
-    print(f"Removing gaps in: {msu.Color.YELLOW}{file_name}{msu.Color.END}")
+    log.info(f"Finding gaps in: {file_name}")
+    print(f"{msu.Color.BOLD}{msu.Color.BLUE}Finding gaps{msu.Color.END} in: {file_name}")
 
     try:
         gaps: msu.MovieSections = find_commercials_and_freezes(file_name)
@@ -264,8 +262,8 @@ def video_gap_removal(file_name: str) -> None:
                          [NO_GAPS_FIELD]
                          )
     else:
-        log.info(f"Found no gaps to remove in {file_name}.")
-        print(f"Found no gaps to remove in {file_name}.")
+        log.info("Found no gaps to remove.")
+        print(f"    Found no gaps to remove in {file_name}.")
 
     # Mark file as processed.
     os.setxattr(file_name, f"user.{NO_GAPS_FIELD}", bytes(NO_GAPS_VALUE, "UTF-8"))

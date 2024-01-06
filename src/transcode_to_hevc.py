@@ -1,3 +1,4 @@
+import datetime as dt
 import logging as log
 import optparse as op
 import os
@@ -37,7 +38,9 @@ def set_transcoded_attribute(file_name: str) -> None:
 
 def already_transcoded(file_name: str) -> bool:
     if has_transcoded_attribute(file_name):
-        print(f"{file_name} was previously transcoded and marked as such.")
+        print(f"    {file_name} {msu.Color.BOLD}{msu.Color.DOUBLE_UNDERLINE}was previously "
+              f"transcoded{msu.Color.END} and marked as such."
+              )
         log.debug(f"{file_name} was previously transcoded and marked as such.")
         return True
 
@@ -56,7 +59,7 @@ def already_transcoded(file_name: str) -> bool:
     if return_val:
         set_transcoded_attribute(file_name)
         log.debug(f"{file_name} was previously transcoded and has NOW be marked as such.")
-        print(f"{file_name} was previously transcoded and has " +
+        print(f"{file_name} {msu.Color.BOLD}{msu.Color.DOUBLE_UNDERLINE}was previously transcoded{msu.Color.END} and has " +
               f"{msu.Color.BOLD}{msu.Color.CYAN}NOW{msu.Color.END} be marked as such."
               )
 
@@ -75,7 +78,7 @@ def transcode(file_name: str) -> None:
     if already_transcoded(file_name):
         return
 
-    print(f"Transcoding {file_name} to hevc/ac3.")
+    print(f"{msu.Color.BOLD}{msu.Color.BLUE}Transcoding{msu.Color.END} {file_name} to hevc/ac3.")
     log.debug(f"Transcoding {file_name} to hevc/ac3.")
 
     ffmpeg_args: [str] = \
@@ -95,6 +98,7 @@ def transcode(file_name: str) -> None:
             msu.temp_results_file_name(file_name),
         ]
 
+    start_ts: dt.datetime = dt.datetime.now()
     with proc.Popen(ffmpeg_args, text=True, stderr=proc.PIPE) as process:
         try:
             pre_transcode_text: [str] = msu.ffmpeg_output_before_transcode(process.stderr)
@@ -106,23 +110,21 @@ def transcode(file_name: str) -> None:
         for line in process.stderr:
             if msu.is_ffmpeg_update(line):
                 current_loc = msu.ffmpeg_get_current_time(line)
-                percent_progress = msu.pretty_progress(current_loc, duration)
-                print(f"Transcode Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}",
+                percent_progress = msu.pretty_progress_with_timer(start_ts, current_loc, duration)
+                print(f"    Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}",
                       end="\r"
                       )
 
     if process.returncode != 0:
-        print("====================")
         for t in pre_transcode_text:
-            print(t)
-        print("====================")
+            log.debug(t)
 
         raise msu.MediaServerUtilityException(f"An error occurred while transcoding " +
                                               f"{file_name}. Return code: {process.returncode}"
                                               )
 
     percent_progress = msu.pretty_progress(duration, duration)
-    print(f"Transcode Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}")
+    print(f"    {msu.Color.GREEN}Complete: {msu.Color.BOLD}{percent_progress}{msu.Color.END}          ")
     log.info(f"... Transcode of {file_name} complete.  Rename file.")
 
     msu.replace_file(file_name,

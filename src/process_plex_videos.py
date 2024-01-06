@@ -1,3 +1,4 @@
+import datetime as dt
 import logging as log
 import optparse as op
 import os
@@ -21,6 +22,12 @@ if "__main__" == __name__:
 
 
 def process_single_file(file_name: str) -> None:
+    current_timestamp: dt.datetime = dt.datetime.now()
+    print(f"{msu.Color.OVERLINE}{msu.Color.UNDERLINE}{msu.Color.BOLD}{current_timestamp.strftime('%m/%d/%Y')} "
+          f"{msu.Color.BOLD}{msu.Color.PURPLE}{current_timestamp.strftime('%H:%M:%S')} "
+          f"{msu.Color.YELLOW}{msu.Color.BOLD}{file_name}{msu.Color.END}"
+          )
+
     retry_count: int = 0
     success: bool = False
 
@@ -32,8 +39,7 @@ def process_single_file(file_name: str) -> None:
             video_gap_removal(clean_file_name)
             success = True
 
-        # except msu.MediaServerUtilityException as msue:
-        except Exception as msue:
+        except msu.MediaServerUtilityException as msue:
             retry_count += 1
             log.error(msue)
             log.exception(msue)

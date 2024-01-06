@@ -1,9 +1,11 @@
 import collections as coll
+import msutils as msu
 from msutils.MediaServerUtilityException import MediaServerUtilityException
 
 MovieSection = coll.namedtuple("MovieSection", "start end comment")
 
 FREEZE_FUDGE_FACTOR: float = 0.75
+
 
 def is_overlap(sect_one: MovieSection, sect_two: MovieSection) -> bool:
     # Partial overlaps.  One section starts within the other's timeframe
@@ -115,7 +117,8 @@ class MovieSections:
                 new_section: MovieSection = MovieSection(
                         new_start,
                         new_end,
-                        f"{list_name}({section.start}-{section.end}) & {self.list_name}({my_section.start}-{my_section.end})"
+                        f"{list_name}({section.start}-{section.end}) & " +
+                        f"{self.list_name}({my_section.start}-{my_section.end})"
                         )
                 return_val.append(new_section)
 
@@ -172,9 +175,10 @@ class MovieSections:
     def section_header(self, fd) -> None:
         fd.write(f"file '{self.file_name}'\n")
 
-    @staticmethod
-    def inpoint(fd, time) -> None:
-        fd.write(f"inpoint {time + FREEZE_FUDGE_FACTOR}\n")
+    def inpoint(self, fd, time) -> None:
+        # find next i-frame (key-frame)
+        key_frame_ts: float = msu.get_next_key_frame_after_timestamp(self.file_name, time)
+        fd.write(f"inpoint {key_frame_ts}\n")
 
     @staticmethod
     def outpoint(fd, time) -> None:

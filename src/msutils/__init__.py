@@ -1,3 +1,4 @@
+import datetime as dt
 import logging as log
 import os
 import pathlib as path
@@ -8,6 +9,8 @@ from .MediaServerUtilityException import MediaServerUtilityException
 from .MovieSections import MovieSection, MovieSections
 from .MovieChapter import MovieChapter
 
+FFMPEG_FILE = "ffmpeg"
+KEY_FRAME_SCAN_DURATION: float = 15.0
 TOO_MANY_LINES_BEFORE_PROGRESS: int = 100000
 
 
@@ -36,6 +39,22 @@ class Color:
 
 
 YES: str = "Yes"
+
+
+def round_to(value: int, base: int) -> int:
+    return base * round(value/base)
+
+
+def how_accurate(percent_complete: float) -> int:
+    if percent_complete < 20.0:
+        return 60
+    if percent_complete < 40.0:
+        return 30
+    if percent_complete < 60.0:
+        return 15
+    if percent_complete < 80.0:
+        return 5
+    return 1
 
 
 def is_user_attribute_set_to_yes(file_name: str, attr_name: str) -> bool:
@@ -81,18 +100,19 @@ def clean_file_name(orig_file_name: str) -> str:
 
 
 def replace_file(orig_file_name: str, replace_with_file_name: str, strip_attrs: [str] = None) -> None:
-    print(f"{Color.BOLD}{Color.BLUE}Replace{Color.END} {orig_file_name} with the new, updated version.")
+    print(f"    {Color.BOLD}{Color.BLUE}Replacing{Color.END} video file.")
     log.info(f"Replace {orig_file_name} with the new, updated version.")
     backup_file_name: str = f"{orig_file_name}.backup"
     # REPLACE ORIGINAL FILE WITH NEW, BETTER ONE
     # 1 -> move original to .backup
     sh.move(orig_file_name, backup_file_name)
     # 2 -> move temp to original
-    sh.move(replace_with_file_name, orig_file_name)
+    sh.copy(replace_with_file_name, orig_file_name)
     # 3 -> copy file attributes provided by the user
     duplicate_xattrs(backup_file_name, orig_file_name, strip_attrs)
     # 4 -> remove backup file
     path.Path.unlink(path.Path(backup_file_name))
+    path.Path.unlink(path.Path(replace_with_file_name))
     log.info(f"Completed update of {orig_file_name}.")
 
 
@@ -173,6 +193,24 @@ def pretty_progress(current: float, total: float) -> str:
     return f"{Color.GREEN}{progress:5.1f}%{Color.END} ({current:,.1f} of {Color.CYAN}{total:,.1f}{Color.END})"
 
 
+def pretty_progress_with_timer(start_ts: dt.datetime, current: float, total: float) -> str:
+    current_ts: dt.datetime = dt.datetime.now()
+    elapsed_time: dt.timedelta = current_ts - start_ts
+    progress: float = 100 * current / total
+
+    time_worked: int = elapsed_time.seconds
+    time_left: int = int(time_worked * (100.0 - progress) / progress)
+    accuracy: int = how_accurate(progress)
+    approximate_time: int = round_to(time_left, accuracy) + accuracy
+
+    mins: int = approximate_time // 60
+    secs: int = approximate_time % 60
+
+    return f"{Color.GREEN}{progress:5.1f}%{Color.END} ({current:,.1f} of " \
+           f"{Color.CYAN}{total:,.1f}{Color.END})" \
+           f"  {Color.BOLD}{mins:02}:{secs:02}{Color.END}"
+
+
 def is_ffmpeg_update(text: str) -> bool:
     idx = text.find(" time=")
     return idx > 0
@@ -210,3 +248,34 @@ def all_codecs_for(file_name: str) -> [str]:
         return_val.append(codec)
 
     return return_val
+
+
+def get_next_key_frame_after_timestamp(video_file: str, loc_in_video: float) -> float:
+    start: float = loc_in_video
+    stop: float = loc_in_video + KEY_FRAME_SCAN_DURATION
+    key_frames: [float] = []
+
+    ffmpeg_args: [str] = [FFMPEG_FILE,
+                          "-hide_banner",
+                          "-ss", f"{start}",
+                          "-to", f"{stop}",
+                          "-skip_frame", "nokey",
+                          "-i", video_file,
+                          "-an",
+                          "-vf", "showinfo",
+                          "-f", "null",
+                          "-",
+                          ]
+
+    with proc.Popen(ffmpeg_args, text=True, stderr=proc.PIPE) as process:
+        for line in process.stderr:
+            start_idx: int = line.find("pts_time:")
+            if start_idx >= 0:
+                end_idx: int = line.find(" ", start_idx + 9)
+                timestamp: float = float(line[start_idx+9: end_idx])
+                key_frames.append(timestamp)
+
+    if len(key_frames) == 0:
+        return loc_in_video
+
+    return loc_in_video + key_frames[0] - 0.25
