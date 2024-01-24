@@ -1,6 +1,5 @@
 import collections as coll
 import msutils as msu
-from msutils.MediaServerUtilityException import MediaServerUtilityException
 
 MovieSection = coll.namedtuple("MovieSection", "start end comment")
 
@@ -146,7 +145,7 @@ class MovieSections:
 
         for sect in self.section_list:
             dur: float = sect.end - sect.start
-            return_val += dur + (2 * FREEZE_FUDGE_FACTOR)
+            return_val += dur + FREEZE_FUDGE_FACTOR
 
         return return_val
 

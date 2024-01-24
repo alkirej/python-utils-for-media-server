@@ -9,7 +9,7 @@ import msutils as msu
 from remove_gaps import video_gap_removal
 from transcode_to_hevc import transcode
 
-MAX_RETRIES: int = 5
+MAX_RETRIES: int = 10
 
 if "__main__" == __name__:
     # SETUP LOGGER BEFORE IMPORTS SO THEY CAN USE THESE SETTINGS
@@ -33,7 +33,7 @@ def process_single_file(file_name: str) -> None:
 
     clean_file_name: str = msu.clean_file_name(file_name)
     shutil.move(file_name, clean_file_name)
-    while not success and retry_count < MAX_RETRIES:
+    while not success and retry_count <= MAX_RETRIES:
         try:
             transcode(clean_file_name)
             video_gap_removal(clean_file_name)
@@ -51,7 +51,7 @@ def process_single_file(file_name: str) -> None:
                 print(f"Error processing {clean_file_name}. {msu.Color.RED}GIVING UP{msu.Color.END}")
             else:
                 log.info(f"Received exception processing {clean_file_name}.  RETRY # {retry_count}")
-                print(f"Error processing {file_name}.  " +
+                print(f"\n    Error processing {file_name}.  " +
                       f"RETRY {msu.Color.BOLD}{msu.Color.PURPLE}#{retry_count}{msu.Color.END}"
                       )
 
