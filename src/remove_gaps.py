@@ -29,15 +29,14 @@ def remove_gaps(gaps: msu.MovieSections):
     gaps.create_input_file_for_video_gaps(INPUTS_FILE_NAME)
     output_file_name: str = msu.temp_results_file_name(gaps.file_name)
 
-    ffmpeg_args = [FFMPEG_FILE,
+    ffmpeg_args = ["nice",
+                   FFMPEG_FILE,
                    "-y",
-                   "-threads", "3",
                    "-safe", "0",
                    "-f", "concat",
                    "-i", INPUTS_FILE_NAME,
                    "-c", "copy",
                    "-c:s", "copy",
-                   "-threads", "3",
                    output_file_name
                    ]
     print(f"    {msu.Color.BLUE}{msu.Color.BOLD}Removing{msu.Color.END} "
@@ -198,8 +197,8 @@ def look_for_freezes_and_progress(file_name: str, output, duration: float = 0.0)
 def find_commercials_and_freezes(file_name: str) -> msu.MovieSections:
     commercials: msu.MovieSections = msu.MovieSections(file_name)
 
-    ffmpeg_args = [FFMPEG_FILE,
-                   "-threads", "5",
+    ffmpeg_args = ["nice",
+                   FFMPEG_FILE,
                    "-i", file_name,
                    "-vf", "freezedetect=n=0.001",
                    "-map", "0:v:0",

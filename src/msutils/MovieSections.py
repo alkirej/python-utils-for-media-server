@@ -145,7 +145,7 @@ class MovieSections:
 
         for sect in self.section_list:
             dur: float = sect.end - sect.start
-            return_val += dur + FREEZE_FUDGE_FACTOR
+            return_val += dur  #  + FREEZE_FUDGE_FACTOR
 
         return return_val
 
@@ -179,9 +179,10 @@ class MovieSections:
         key_frame_ts: float = msu.get_next_key_frame_after_timestamp(self.file_name, time)
         fd.write(f"inpoint {key_frame_ts}\n")
 
-    @staticmethod
-    def outpoint(fd, time) -> None:
-        fd.write(f"outpoint {time - FREEZE_FUDGE_FACTOR}\n")
+    def outpoint(self, fd, time) -> None:
+        key_frame_ts: float = msu.get_next_key_frame_after_timestamp(self.file_name, time+0.1) - 0.1
+        # fd.write(f"outpoint {time - FREEZE_FUDGE_FACTOR}\n")
+        fd.write(f"outpoint {key_frame_ts}\n")
 
     @staticmethod
     def section_footer(fd, comment: str) -> None:

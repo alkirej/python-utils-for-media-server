@@ -12,16 +12,19 @@ FFMPEG_PROGRAM_LOCS = ["/home/jeff/bin/ffmpeg", "/usr/bin/ffmpeg"]
 current_ffmpeg_index = 0
 
 PROPER_VIDEO_CODECS: [str] = ["libx265", "hevc"]
+OTHER_VIDEO_CODECS: [str] = ["h264", "mpeg2video"]
 PROPER_AUDIO_CODECS: [str] = ["ac3"]
-TEXT_SUBTITLE_CODECS: [str] = []
-GRAPHIC_SUBTITLE_CODECS: [str] = []
+OTHER_AUDIO_CODECS: [str] = ["aac"]
+TEXT_SUBTITLE_CODECS: [str] = ["mov_text", "srt", "vobsub"]
+PROPER_SUBTITLE_CODECS: [str] = ["mov_text"]
+GRAPHIC_SUBTITLE_CODECS: [str] = ["dvd_subtitle"]
+CODECS_TO_IGNORE: [str] = ["bin_data", "png", ""]
 
 TRANSCODED_ATTRIBUTE: str = "transcoded_to_hevc"
-MP4_SUBTITLE_CODEC = "mov_text"
-MKV_SUBTITLE_CODEC = "srt"
 
 VIDEO_CODEC = PROPER_VIDEO_CODECS[0]
 AUDIO_CODEC = PROPER_AUDIO_CODECS[0]
+SUBTITLE_CODEC = PROPER_SUBTITLE_CODECS[0]
 CORRECT_CODEC = "copy"
 
 if "__main__" == __name__:
@@ -54,6 +57,7 @@ def already_transcoded(file_name: str) -> bool:
     # CHECK IF PROPER CODECS ARE PRESENT IN THE VIDEO FILE.
     video_codec_ok: bool = False
     audio_codec_ok: bool = False
+    subtitle_codec_ok: bool = True
 
     codecs: [str] = msu.all_codecs_for(file_name)
     for c in codecs:
@@ -61,6 +65,8 @@ def already_transcoded(file_name: str) -> bool:
             video_codec_ok = c in PROPER_VIDEO_CODECS
         if not audio_codec_ok:
             audio_codec_ok = c in PROPER_AUDIO_CODECS
+        if subtitle_codec_ok:
+            subtitle_codec_ok = c not in GRAPHIC_SUBTITLE_CODECS and c not in PROPER_SUBTITLE_CODECS
 
     return_val: bool = video_codec_ok and audio_codec_ok
     if return_val:
@@ -86,29 +92,42 @@ def determine_new_codecs(file_name: str) -> (str, str, str):
     audio_codec: typ.Optional[str] = None
     subtitle_codec: typ.Optional[str] = None
 
-    if file_name.endswith(".mp4"):
-        subtitle_codec = MP4_SUBTITLE_CODEC
-    elif file_name.endswith(".mkv"):
-        subtitle_codec = MKV_SUBTITLE_CODEC
-
     codecs: [str] = msu.all_codecs_for(file_name)
     for c in codecs:
+        c2: str = c.lower()
+        if c2 not in PROPER_VIDEO_CODECS and \
+           c2 not in OTHER_VIDEO_CODECS and \
+           c2 not in PROPER_AUDIO_CODECS and \
+           c2 not in OTHER_AUDIO_CODECS and \
+           c2 not in GRAPHIC_SUBTITLE_CODECS and \
+           c2 not in TEXT_SUBTITLE_CODECS and \
+           c2 not in CODECS_TO_IGNORE:
+            print(f"INVALID CODEC: {c}")
+            log.error(f"INVALID CODEC: {c}")
+            raise msu.MediaServerUtilityException(f"Invalid codec found transcoding " +
+                                                  f"{file_name}. Codec: {c}"
+                                                  )
+
         if video_codec is None:
             if c in PROPER_VIDEO_CODECS:
                 video_codec = CORRECT_CODEC
+            elif c in OTHER_VIDEO_CODECS:
+                video_codec = VIDEO_CODEC
 
         if audio_codec is None:
             if c in PROPER_AUDIO_CODECS:
                 audio_codec = CORRECT_CODEC
+            elif c in OTHER_AUDIO_CODECS:
+                audio_codec = AUDIO_CODEC
 
         if subtitle_codec is None:
             if c in GRAPHIC_SUBTITLE_CODECS:
                 subtitle_codec = CORRECT_CODEC
             elif c in TEXT_SUBTITLE_CODECS:
-                if file_name.endswith(".mp4"):
-                    subtitle_codec = MP4_SUBTITLE_CODEC
-                elif file_name.endswith(".mkv"):
-                    subtitle_codec = MKV_SUBTITLE_CODEC
+                if c == subtitle_codec:
+                    subtitle_codec = CORRECT_CODEC
+                else:
+                    subtitle_codec = SUBTITLE_CODEC
 
     prev_transcoded: bool = video_codec == CORRECT_CODEC and audio_codec == CORRECT_CODEC
     if prev_transcoded:
@@ -119,10 +138,10 @@ def determine_new_codecs(file_name: str) -> (str, str, str):
               )
         return CORRECT_CODEC, CORRECT_CODEC, CORRECT_CODEC
 
-    if video_codec is None:
-        video_codec = VIDEO_CODEC
-    if audio_codec is None:
-        audio_codec = AUDIO_CODEC
+    # if video_codec is None:
+    #     video_codec = VIDEO_CODEC
+    # if audio_codec is None:
+    #     audio_codec = AUDIO_CODEC
 
     return video_codec, audio_codec, subtitle_codec
 
@@ -138,17 +157,17 @@ def transcode(file_name: str) -> None:
     if sbt_codec is None:
         sbt_codec = CORRECT_CODEC
 
-    print(f"{msu.Color.BOLD}{msu.Color.BLUE}Transcoding{msu.Color.END} {file_name} to hevc/ac3 "
+    print(f"{msu.Color.BOLD}{msu.Color.BLUE}Transcoding{msu.Color.END} {file_name} to "
+          f"{vid_codec}/{aud_codec}/{sbt_codec}"
           f"using {msu.Color.CYAN}{FFMPEG_PROGRAM_LOCS[current_ffmpeg_index]}{msu.Color.END}."
           )
-    log.debug(f"Transcoding {file_name} to hevc/ac3 using {FFMPEG_PROGRAM_LOCS[current_ffmpeg_index]}.")
+    log.debug(f"Transcoding {file_name} to hevc/ac3/{sbt_codec} using {FFMPEG_PROGRAM_LOCS[current_ffmpeg_index]}.")
 
     ffmpeg_args: [str] = \
         [
+            "nice",
             FFMPEG_PROGRAM_LOCS[current_ffmpeg_index],
             "-y",
-            # "-ss", "00:00:00",
-            "-threads", "3",                # use as few threads as possible
             "-i", file_name,                # input file
             "-map", "0:v:0",                # Use 1st video stream
             "-map", "0:a?",                 # Keep all audio streams
@@ -156,7 +175,6 @@ def transcode(file_name: str) -> None:
             "-c:v", vid_codec,              # video codec (hevc/h.265)
             "-c:a", aud_codec,              # audio codec (ac3)
             "-c:s", sbt_codec,              # subtitle codec (matches original)
-            "-threads", "3",                # use as few threads as possible
             msu.temp_results_file_name(file_name),
         ]
 

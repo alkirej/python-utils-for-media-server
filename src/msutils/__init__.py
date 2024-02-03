@@ -123,7 +123,8 @@ def ffmpeg_output_before_transcode(output) -> [str]:
     started_transcoding: bool = False
     while not started_transcoding:
         ffmpeg_output = output.readline()
-        pre_transcode_text.append(ffmpeg_output)
+        if len(ffmpeg_output) > 3:
+            pre_transcode_text.append(ffmpeg_output)
         started_transcoding = is_ffmpeg_update(ffmpeg_output)
 
         line_count += 1
