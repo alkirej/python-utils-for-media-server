@@ -12,9 +12,9 @@ FFMPEG_PROGRAM_LOCS = ["/home/jeff/bin/ffmpeg", "/usr/bin/ffmpeg"]
 current_ffmpeg_index = 0
 
 PROPER_VIDEO_CODECS: [str] = ["libx265", "hevc"]
-OTHER_VIDEO_CODECS: [str] = ["h264", "mpeg2video"]
+OTHER_VIDEO_CODECS: [str] = ["h264", "mpeg2video", "mpeg4"]
 PROPER_AUDIO_CODECS: [str] = ["ac3"]
-OTHER_AUDIO_CODECS: [str] = ["aac"]
+OTHER_AUDIO_CODECS: [str] = ["aac", "vorbis"]
 TEXT_SUBTITLE_CODECS: [str] = ["mov_text", "srt", "vobsub"]
 PROPER_SUBTITLE_CODECS: [str] = ["mov_text"]
 GRAPHIC_SUBTITLE_CODECS: [str] = ["dvd_subtitle"]
@@ -154,12 +154,18 @@ def transcode(file_name: str) -> None:
     (vid_codec, aud_codec, sbt_codec) = determine_new_codecs(file_name)
     if vid_codec == CORRECT_CODEC and aud_codec == CORRECT_CODEC:
         return
+    if vid_codec is None:
+        log.error(f"No video found for {file_name}.  Skipping file.")
+
+    if aud_codec is None:
+        aud_codec = CORRECT_CODEC
+
     if sbt_codec is None:
         sbt_codec = CORRECT_CODEC
 
     print(f"{msu.Color.BOLD}{msu.Color.BLUE}Transcoding{msu.Color.END} {file_name} to "
-          f"{vid_codec}/{aud_codec}/{sbt_codec}"
-          f"using {msu.Color.CYAN}{FFMPEG_PROGRAM_LOCS[current_ffmpeg_index]}{msu.Color.END}."
+          f"{vid_codec}/{aud_codec}/{sbt_codec} using "
+          f"{msu.Color.CYAN}{FFMPEG_PROGRAM_LOCS[current_ffmpeg_index]}{msu.Color.END}."
           )
     log.debug(f"Transcoding {file_name} to hevc/ac3/{sbt_codec} using {FFMPEG_PROGRAM_LOCS[current_ffmpeg_index]}.")
 
