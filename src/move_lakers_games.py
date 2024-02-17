@@ -3,11 +3,11 @@ import os
 import shutil
 
 GAMES_RECORDED_DIR: str = "/home/jeff/Videos/recordings/Lakers"
-PLEX_DIR_FOR_GAMES: dict = {"2017": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2016-17/",
+PLEX_DIR_FOR_GAMES: dict = {"2017": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2016-17",
                             }
 GAME_POSTERS: dict = {"2017": "game-poster.webp"
-
                       }
+
 
 def get_year_from_game_filename(fn: str) -> str:
     yr_start_idx: int = fn.find("-s") + 2
@@ -36,6 +36,7 @@ def create_game_poster_for(file_name: str) -> None:
 
     shutil.copy(poster_original_path, final_poster_path)
 
+
 def move_game_video(file_name: str) -> None:
     year = get_year_from_game_filename(file_name)
     plex_dir: str = get_plex_dir_for_year(year)
@@ -53,7 +54,7 @@ def main() -> None:
         file_count: int = len(glob.glob(f"{fn_wo_ext}.*"))
         if file_count == 1:
             print(f"Moving {fn} to plex ... ", end="", flush=True)
-            create_game_poster_for(fn_wo_ext)
+            create_game_poster_for(fn)
             move_game_video(fn)
             print("COMPLETE")
 
