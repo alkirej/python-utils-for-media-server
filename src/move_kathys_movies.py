@@ -1,7 +1,7 @@
 import os
 import shutil
 
-RECORDINGS_DIR: str = "/home/jeff/Videos/recordings/"
+RECORDINGS_DIR: str = "/home/jeff/Videos/recordings/movies"
 PLEX_DIR_FOR_MOVIES: str = "/nfs/Media-01/media-store/Video/Movies"
 
 
