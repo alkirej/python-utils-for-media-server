@@ -9,8 +9,9 @@ PLEX_DIR_FOR_TV: str = "/nfs/Media-01/media-store/Video/Television Shows"
 def process_episode(tv_show_dir_name: str, season_dir_name: str, file_name: str) -> None:
     # file name should not include the extension.  (Mkv will be added automatically)
     season_path: str = os.path.join(tv_show_dir_name, season_dir_name)
-    episode_path: str = os.path.join(season_path, f"{file_name}.mkv")
+    episode_path: str = os.path.join(season_path, {file_name})
     episode_files: [str] = glob.glob(f"{episode_path}.*")
+    episode_path = f"{episode_path}.mkv"
 
     if len(episode_files) == 1:
         print("            Moving episode file ... ", end="", flush=True)
