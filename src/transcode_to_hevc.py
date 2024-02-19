@@ -2,11 +2,14 @@ import datetime as dt
 import logging as log
 import optparse as op
 import os
+import shutil
 import subprocess as proc
 import sys
 import typing as typ
 
 import msutils as msu
+
+WORK_FILE = "working"
 
 FFMPEG_PROGRAM_LOCS = ["/home/jeff/bin/ffmpeg", "/usr/bin/ffmpeg"]
 current_ffmpeg_index = 0
@@ -150,6 +153,7 @@ def transcode(file_name: str) -> None:
     global current_ffmpeg_index
 
     assert file_name.endswith(".mp4") or file_name.endswith(".mkv")
+    work_file_name: str = f"{WORK_FILE}{file_name[-4:]}"
 
     (vid_codec, aud_codec, sbt_codec) = determine_new_codecs(file_name)
     if vid_codec == CORRECT_CODEC and aud_codec == CORRECT_CODEC:
@@ -169,12 +173,15 @@ def transcode(file_name: str) -> None:
           )
     log.debug(f"Transcoding {file_name} to hevc/ac3/{sbt_codec} using {FFMPEG_PROGRAM_LOCS[current_ffmpeg_index]}.")
 
+    print(f"    Copying {work_file_name} to local disk for faster processing ... ", end="", flush=True)
+    shutil.copy2(file_name, work_file_name)
+    print("COMPLETE")
     ffmpeg_args: [str] = \
         [
             "nice",
             FFMPEG_PROGRAM_LOCS[current_ffmpeg_index],
             "-y",
-            "-i", file_name,                # input file
+            "-i", work_file_name,                # input file
             "-map", "0:v:0",                # Use 1st video stream
             "-map", "0:a?",                 # Keep all audio streams
             "-map", "0:s?",                 # Keep all subtitles
