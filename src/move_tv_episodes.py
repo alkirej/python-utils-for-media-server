@@ -52,8 +52,9 @@ def main() -> None:
     show_list.sort()
 
     for tv_show in show_list:
-        print(f"Found dir for show {tv_show}.")
-        process_tv_show(tv_show)
+        if os.path.isdir(tv_show):
+            print(f"Found dir for show {tv_show}.")
+            process_tv_show(tv_show)
 
 
 if "__main__" == __name__:
