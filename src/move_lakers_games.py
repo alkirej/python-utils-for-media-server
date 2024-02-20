@@ -34,7 +34,7 @@ def create_game_poster_for(file_name: str) -> None:
     poster_original_path: str = os.path.join(plex_dir, poster_file)
     final_poster_path: str = os.path.join(plex_dir, f"{file_name[:-4]}.{poster_file_ext}")
 
-    shutil.copy(poster_original_path, final_poster_path)
+    shutil.copyfile(poster_original_path, final_poster_path)
 
 
 def move_game_video(file_name: str) -> None:

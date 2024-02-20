@@ -4,6 +4,7 @@ import os
 import pathlib as path
 import shutil as sh
 import subprocess as proc
+import time
 
 from .ffmpeg_utils import run_ffmpeg
 from .MediaServerUtilityException import MediaServerUtilityException
@@ -108,7 +109,14 @@ def replace_file(orig_file_name: str, replace_with_file_name: str, strip_attrs: 
     # 1 -> move original to .backup
     sh.move(orig_file_name, backup_file_name)
     # 2 -> move temp to original
-    sh.copy(replace_with_file_name, orig_file_name)
+    while True:
+        try:
+            sh.copyfile(replace_with_file_name, orig_file_name)
+            break
+        except PermissionError:
+            print("Permission error ... retry one time after 1 minute.")
+            time.sleep(65)
+
     # 3 -> copy file attributes provided by the user
     duplicate_xattrs(backup_file_name, orig_file_name, strip_attrs)
     # 4 -> remove backup file
