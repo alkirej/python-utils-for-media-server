@@ -2,7 +2,7 @@ import glob
 import os
 import shutil
 
-RECORDINGS_DIR: str = "/media/jeff/ToolsDisk/recordings/episodes"
+RECORDINGS_DIR: str = "/media/jeff/ToolsDisk/Videos/recordings/episodes"
 PLEX_DIR_FOR_TV: str = "/nfs/Media-01/media-store/Video/Television Shows"
 
 
