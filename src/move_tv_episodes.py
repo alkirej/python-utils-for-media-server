@@ -27,7 +27,7 @@ def process_season(tv_show_dir_name: str, season_dir_name: str) -> None:
     episode_list.sort()
 
     for episode in episode_list:
-        print(f"        Found episode {episode}")
+        print(f"            Found episode {episode}")
         if episode.endswith(".mkv"):
             process_episode(tv_show_dir_name, season_dir_name, episode[:-4])
 
@@ -37,7 +37,7 @@ def process_tv_show(tv_show_dir_name: str) -> None:
     season_list.sort()
 
     for season in season_list:
-        print(f"    Found dir for {season}.")
+        print(f"        Found dir for season {season}.")
         process_season(tv_show_dir_name, season)
 
 
@@ -53,7 +53,7 @@ def main() -> None:
 
     for tv_show in show_list:
         if os.path.isdir(tv_show):
-            print(f"Found dir for show {tv_show}.")
+            print(f"    Found dir for show {tv_show}.")
             process_tv_show(tv_show)
 
 
