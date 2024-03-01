@@ -54,9 +54,9 @@ def remove_gaps(gaps: msu.MovieSections):
         for line in process.stderr:
             if msu.is_ffmpeg_update(line):
                 current = msu.ffmpeg_get_current_time(line)
-                print(f"        Removing: {msu.Color.BOLD}{msu.Color.CYAN}{current:,.1f}{msu.Color.END}", end="\r")
+                print(f"        Removing: {msu.Color.BOLD}{msu.Color.CYAN}{current:,.1f}{msu.Color.END}    ", end="\r")
 
-    print(f"        Removing: {msu.Color.BOLD}{msu.Color.CYAN}{current:,.1f}{msu.Color.END}")
+    print(f"        Removing: {msu.Color.BOLD}{msu.Color.CYAN}{current:,.1f}{msu.Color.END}    ")
     log.info(f"Gap removal complete for {gaps.file_name}.")
     path.Path.unlink(path.Path(INPUTS_FILE_NAME))
 
@@ -187,7 +187,7 @@ def look_for_freezes_and_progress(file_name: str, output, duration: float = 0.0)
         elif msu.is_ffmpeg_update(ffmpeg_output):
             current_loc = msu.ffmpeg_get_current_time(ffmpeg_output)
             percent_progress = msu.pretty_progress_with_timer(start_ts, current_loc, duration)
-            print(f"    Searching: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}", end="\r")
+            print(f"    Searching: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}    ", end="\r")
 
     percent_progress = msu.pretty_progress(duration, duration)
     print(f"    {msu.Color.GREEN}Complete: {msu.Color.BOLD}{percent_progress}{msu.Color.END}          ")

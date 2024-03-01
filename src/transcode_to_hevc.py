@@ -205,7 +205,7 @@ def transcode(file_name: str) -> None:
             if msu.is_ffmpeg_update(line):
                 current_loc = msu.ffmpeg_get_current_time(line)
                 percent_progress = msu.pretty_progress_with_timer(start_ts, current_loc, duration)
-                print(f"    Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}",
+                print(f"    Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}    ",
                       end="\r"
                       )
             else:
