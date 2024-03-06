@@ -11,9 +11,10 @@ def main() -> None:
 
     for (current_dir, dirs, files) in os.walk(RECORDINGS_DIR):
         dirs.sort()
+        _, name = os.path.split(current_dir)
         if len(files) == 1 and files[0].endswith(".mkv"):
             print(f"Moving {current_dir} to {PLEX_DIR_FOR_MOVIES} ... ", end="", flush=True)
-            shutil.copytree(current_dir, os.path.join(PLEX_DIR_FOR_MOVIES, current_dir))
+            shutil.copytree(current_dir, os.path.join(PLEX_DIR_FOR_MOVIES, name))
             shutil.rmtree(current_dir)
             print("Complete")
 
