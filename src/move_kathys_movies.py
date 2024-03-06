@@ -13,7 +13,8 @@ def main() -> None:
         dirs.sort()
         if len(files)==1 and files[0].endswith(".mkv"):
             print(f"Moving {current_dir} to {PLEX_DIR_FOR_MOVIES} ... ", end="", flush=True)
-            shutil.move(current_dir, PLEX_DIR_FOR_MOVIES)
+            shutil.copy2(current_dir, PLEX_DIR_FOR_MOVIES)
+            shutil.rmtree(current_dir)
             print("Complete")
 
 

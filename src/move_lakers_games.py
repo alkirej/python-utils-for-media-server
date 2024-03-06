@@ -3,9 +3,11 @@ import os
 import shutil
 
 GAMES_RECORDED_DIR: str = "/home/jeff/Videos/recordings/Lakers"
-PLEX_DIR_FOR_GAMES: dict = {"2017": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2016-17",
+PLEX_DIR_FOR_GAMES: dict = {"2013": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2012-13",
+                            "2017": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2016-17",
                             }
-GAME_POSTERS: dict = {"2017": "game-poster.webp"
+GAME_POSTERS: dict = {"2013": "game-poster.webp",
+                      "2017": "game-poster.webp",
                       }
 
 
