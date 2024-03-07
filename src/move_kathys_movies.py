@@ -5,18 +5,33 @@ RECORDINGS_DIR: str = "/home/jeff/Videos/recordings/movies"
 PLEX_DIR_FOR_MOVIES: str = "/nfs/Media-01/media-store/Video/Movies"
 
 
-def main() -> None:
-    print("Upload and newly recorded movies games to plex ...")
-    os.chdir(RECORDINGS_DIR)
+def process_movie(movie_dir_name: str) -> None:
+    movie_files: [str] = os.listdir(movie_dir_name)
 
-    for (current_dir, dirs, files) in os.walk(RECORDINGS_DIR):
-        dirs.sort()
-        _, name = os.path.split(current_dir)
-        if len(files) == 1 and files[0].endswith(".mkv"):
-            print(f"Moving {current_dir} to {PLEX_DIR_FOR_MOVIES} ... ", end="", flush=True)
-            shutil.copytree(current_dir, os.path.join(PLEX_DIR_FOR_MOVIES, name), dirs_exist_ok=True)
-            shutil.rmtree(current_dir)
-            print("Complete")
+    if len(movie_files) == 1 and movie_files[0][-4:].lower() == ".mkv":
+        print("            Moving movie file ... ", end="", flush=True)
+        ensure_dir_exists(os.path.join(PLEX_DIR_FOR_MOVIES, movie_dir_name))
+        dest_path: str = os.path.join(PLEX_DIR_FOR_MOVIES, movie_dir_name, movie_files[0])
+        movie_path: str = os.path.join(movie_dir_name, movie_files[0])
+        shutil.move(movie_path, dest_path)
+        print("Complete.")
+
+
+def ensure_dir_exists(path: str) -> None:
+    os.makedirs(path, exist_ok=True)
+
+
+def main() -> None:
+    print("Upload newly recorded movies to plex ...")
+    os.chdir(RECORDINGS_DIR)
+    movie_list: [str] = os.listdir(os.getcwd())
+    movie_list.sort()
+
+    for movie in movie_list:
+        if os.path.isdir(movie):
+            print(f"    Found dir for movie: {movie}.")
+            process_movie(movie)
+    print(f"    Complete")
 
 
 if "__main__" == __name__:

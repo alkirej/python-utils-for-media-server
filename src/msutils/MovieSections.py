@@ -145,7 +145,7 @@ class MovieSections:
 
         for sect in self.section_list:
             dur: float = sect.end - sect.start
-            return_val += dur  #  + FREEZE_FUDGE_FACTOR
+            return_val += dur
 
         return return_val
 
@@ -159,7 +159,9 @@ class MovieSections:
                 self.section_footer(fd, first_gap.comment)
 
             prev_gap = first_gap
-            for gap in self.section_list:
+
+            # for gap in self.section_list:
+            for gap in [g for g in self.section_list if (g.end-g.start) > 2.5]:
                 if gap == first_gap:
                     continue
                 self.section_header(fd)
