@@ -12,8 +12,7 @@ def process_movie(movie_dir_name: str) -> None:
         print("            Moving movie file ... ", end="", flush=True)
         ensure_dir_exists(os.path.join(PLEX_DIR_FOR_MOVIES, movie_dir_name))
         dest_path: str = os.path.join(PLEX_DIR_FOR_MOVIES, movie_dir_name, movie_files[0])
-        movie_path: str = os.path.join(movie_dir_name, movie_files[0])
-        shutil.move(movie_path, dest_path)
+        shutil.move(movie_dir_name, dest_path)
         print("Complete.")
 
 
