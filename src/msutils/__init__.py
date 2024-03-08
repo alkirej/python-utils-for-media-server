@@ -288,4 +288,4 @@ def get_next_key_frame_after_timestamp(video_file: str, loc_in_video: float) -> 
     if len(key_frames) == 0:
         return loc_in_video
 
-    return loc_in_video + key_frames[0] - 0.1  # 0.25
+    return loc_in_video + key_frames[0] - 0.25
