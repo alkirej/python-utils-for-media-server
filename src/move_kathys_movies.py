@@ -11,7 +11,7 @@ def process_movie(movie_dir_name: str) -> None:
     if len(movie_files) == 1 and movie_files[0][-4:].lower() == ".mkv":
         print("            Moving movie file ... ", end="", flush=True)
         ensure_dir_exists(os.path.join(PLEX_DIR_FOR_MOVIES, movie_dir_name))
-        dest_path: str = os.path.join(PLEX_DIR_FOR_MOVIES, movie_dir_name, movie_files[0])
+        dest_path: str = os.path.join(PLEX_DIR_FOR_MOVIES, movie_dir_name)
         shutil.move(movie_dir_name, dest_path)
         print("Complete.")
 
