@@ -2,7 +2,7 @@ import os
 import shutil
 
 RECORDINGS_DIR: str = "/home/jeff/Videos/recordings/movies"
-PLEX_DIR_FOR_MOVIES: str = "/nfs/Media-01/media-store/Video/Movies"
+PLEX_DIR_FOR_MOVIES: str = "/nfs/Media-02/media-store/Video/Movies"
 
 
 def process_movie(movie_dir_name: str) -> None:

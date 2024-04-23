@@ -4,7 +4,7 @@ import shutil
 
 # RECORDINGS_DIR: str = "/media/jeff/ToolsDisk/Videos/recordings/episodes"
 RECORDINGS_DIR: str = "/home/jeff/Videos/recordings/episodes"
-PLEX_DIR_FOR_TV: str = "/nfs/Media-01/media-store/Video/Television Shows"
+PLEX_DIR_FOR_TV: str = "/nfs/Media-02/media-store/Video/Television Shows"
 
 
 def process_episode(tv_show_dir_name: str, season_dir_name: str, file_name: str) -> None:
