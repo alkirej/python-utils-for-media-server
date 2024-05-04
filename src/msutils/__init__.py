@@ -218,7 +218,7 @@ def pretty_progress_with_timer(start_ts: dt.datetime, current: float, total: flo
 
     return f"{Color.GREEN}{progress:5.1f}%{Color.END} ({current:,.1f} of " \
            f"{Color.CYAN}{total:,.1f}{Color.END})" \
-           f"  {Color.BOLD}{mins:02}:{secs:02}{Color.END}"
+           f"  {Color.BOLD}{mins:02}:{secs:02}{Color.END}    "
 
 
 def is_ffmpeg_update(text: str) -> bool:
