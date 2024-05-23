@@ -35,6 +35,7 @@ def remove_gaps(gaps: msu.MovieSections):
                    "-safe", "0",
                    "-f", "concat",
                    "-i", INPUTS_FILE_NAME,
+                   "-map", "0",
                    "-c", "copy",
                    "-c:s", "copy",
                    output_file_name
@@ -43,7 +44,7 @@ def remove_gaps(gaps: msu.MovieSections):
           f"{msu.Color.BOLD}{msu.Color.GREEN}{gaps.total_time():.1f}{msu.Color.END} seconds from movie."
           )
     log.info(f"Removing {gaps.total_time():.1f} seconds of gaps (commercials and freezes) from {gaps.file_name}.")
-    if gaps.total_time() > 15:
+    if gaps.total_time() > 0:
         for x in gaps.section_list:
             print(f"        ...   {msu.Color.BOLD}{msu.Color.CYAN}{x.start:>8,.1f}{msu.Color.END}-{x.end:>8,.1f}: " +
                   f"{msu.Color.BOLD}{msu.Color.YELLOW}{x.comment}{msu.Color.END}"

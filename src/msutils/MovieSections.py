@@ -123,7 +123,8 @@ class MovieSections:
 
         return return_val
 
-    def ms_intersection(self, ms2):
+    def ms_intersection(self, ms2, min_section_dur: float = 5.0):
+
         if self.file_name != ms2.file_name:
             raise MediaServerUtilityException(f"To intersect two MovieSections objects, "
                                               f"the file_names must be the same. {self.file_name}"
@@ -133,7 +134,8 @@ class MovieSections:
         for section in ms2.section_list:
             matches: [MovieSection] = self._single_intersect(ms2.list_name, section)
             for m in matches:
-                return_val.add_section(m)
+                if (m.end - m.start) > min_section_dur:
+                    return_val.add_section(m)
 
         return return_val
 
@@ -149,7 +151,7 @@ class MovieSections:
 
         return return_val
 
-    def create_input_file_for_video_gaps(self, inputs_file_name: str):
+    def create_input_file_for_video_gaps(self, inputs_file_name: str, min_section_dur: float = 5.0):
         with open(inputs_file_name, "w") as fd:
             first_gap: MovieSection = self.section_list[0]
             if first_gap.start > 0:
@@ -161,7 +163,7 @@ class MovieSections:
             prev_gap = first_gap
 
             # for gap in self.section_list:
-            for gap in [g for g in self.section_list if (g.end-g.start) > 2.5]:
+            for gap in [g for g in self.section_list if (g.end-g.start) > min_section_dur]:
                 if gap == first_gap:
                     continue
                 self.section_header(fd)
