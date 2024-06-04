@@ -15,12 +15,12 @@ FFMPEG_PROGRAM_LOCS = ["/home/jeff/bin/ffmpeg", "/usr/bin/ffmpeg"]
 current_ffmpeg_index = 0
 
 PROPER_VIDEO_CODECS: [str] = ["libx265", "hevc"]
-OTHER_VIDEO_CODECS: [str] = ["h264", "mpeg2video", "mpeg4"]
+OTHER_VIDEO_CODECS: [str] = ["h264", "mpeg2video", "mpeg4", "eac3"]
 PROPER_AUDIO_CODECS: [str] = ["ac3"]
 OTHER_AUDIO_CODECS: [str] = ["aac", "vorbis", "pcm_s16le", "mp3"]
-TEXT_SUBTITLE_CODECS: [str] = ["mov_text", "srt", "vobsub", "subrip", "ass"]
+TEXT_SUBTITLE_CODECS: [str] = ["mov_text", "srt", "subrip", "ass"]
 PROPER_SUBTITLE_CODECS: [str] = ["mov_text"]
-GRAPHIC_SUBTITLE_CODECS: [str] = ["dvd_subtitle"]
+GRAPHIC_SUBTITLE_CODECS: [str] = ["dvd_subtitle", "vobsub"]
 CODECS_TO_IGNORE: [str] = ["bin_data", "png", ""]
 
 TRANSCODED_ATTRIBUTE: str = "transcoded_to_hevc"
