@@ -14,7 +14,7 @@ MAX_RETRIES: int = 10
 if "__main__" == __name__:
     # SETUP LOGGER BEFORE IMPORTS SO THEY CAN USE THESE SETTINGS
     log.basicConfig(filename="process-plex-videos.log",
-                    filemode="w",
+                    filemode="a",
                     format="%(asctime)s %(filename)15.15s %(funcName)15.15s %(levelname)5.5s %(lineno)4.4s %(message)s",
                     datefmt="%Y%m%d-%H:%M:%S"
                     )

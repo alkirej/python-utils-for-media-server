@@ -3,7 +3,8 @@ import os
 import shutil
 
 GAMES_RECORDED_DIR: str = "/home/jeff/Videos/recordings/Lakers"
-PLEX_DIR_FOR_GAMES: dict = {"1984": "/nfs/Media-01/media-store/Video/Sports Games/Lakers/1983-84",
+PLEX_DIR_FOR_GAMES: dict = {"1964": "/nfs/Media-01/media-store/Video/Sports Games/Lakers/1963-64",
+                            "1984": "/nfs/Media-01/media-store/Video/Sports Games/Lakers/1983-84",
                             "2013": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2012-13",
                             "2014": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2013-14",
                             "2015": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2014-15",
@@ -11,7 +12,8 @@ PLEX_DIR_FOR_GAMES: dict = {"1984": "/nfs/Media-01/media-store/Video/Sports Game
                             "2017": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2016-17",
                             "2018": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2017-18",
                             }
-GAME_POSTERS: dict = {"1984": "game-poster.webp",
+GAME_POSTERS: dict = {"1964": "game-poster.webp",
+                      "1984": "game-poster.webp",
                       "2013": "game-poster.webp",
                       "2014": "Season2014a.jpg",
                       "2015": "game-poster.webp",
