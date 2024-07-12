@@ -5,6 +5,7 @@ import shutil
 GAMES_RECORDED_DIR: str = "/home/jeff/Videos/recordings/Lakers"
 PLEX_DIR_FOR_GAMES: dict = {"1962": "/nfs/Media-01/media-store/Video/Sports Games/Lakers/1961-62",
                             "1964": "/nfs/Media-01/media-store/Video/Sports Games/Lakers/1963-64",
+                            "1973": "/nfs/Media-01/media-store/Video/Sports Games/Lakers/1972-73",
                             "1984": "/nfs/Media-01/media-store/Video/Sports Games/Lakers/1983-84",
                             "1990": "/nfs/Media-01/media-store/Video/Sports Games/Lakers/1989-90",
                             "2013": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2012-13",
@@ -16,6 +17,7 @@ PLEX_DIR_FOR_GAMES: dict = {"1962": "/nfs/Media-01/media-store/Video/Sports Game
                             }
 GAME_POSTERS: dict = {"1962": "game-poster.webp",
                       "1964": "game-poster.webp",
+                      "1973": "game-poster.webp",
                       "1984": "game-poster.webp",
                       "1990": "game-poster.webp",
                       "2013": "game-poster.webp",
