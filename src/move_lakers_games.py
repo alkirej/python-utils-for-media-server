@@ -14,6 +14,7 @@ PLEX_DIR_FOR_GAMES: dict = {"1962": "/nfs/Media-01/media-store/Video/Sports Game
                             "2016": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2015-16",
                             "2017": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2016-17",
                             "2018": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2017-18",
+                            "2019": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2018-19",
                             }
 GAME_POSTERS: dict = {"1962": "game-poster.webp",
                       "1964": "game-poster.webp",
@@ -26,6 +27,7 @@ GAME_POSTERS: dict = {"1962": "game-poster.webp",
                       "2016": "game-poster.webp",
                       "2017": "game-poster.webp",
                       "2018": "game-poster.webp",
+                      "2019": "game-poster.jpg",
                       }
 
 
