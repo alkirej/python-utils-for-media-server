@@ -200,17 +200,26 @@ def transcode(file_name: str) -> None:
         except msu.MediaServerUtilityException as msue:
             log.error(f"Error during startup of ffmpeg for {file_name}")
             log.exception(msue)
+        except UnicodeDecodeError:
+            # Trouble parsing text, but video is still ok.
+            duration = 3600
+            pass
 
-        for line in process.stderr:
-            if msu.is_ffmpeg_update(line):
-                current_loc = msu.ffmpeg_get_current_time(line)
-                percent_progress = msu.pretty_progress_with_timer(start_ts, current_loc, duration)
-                print(f"    Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}    ",
-                      end="\r"
-                      )
-            else:
-                log.info(f"ffmpeg says: {line}")
-                # print(f"*** ffmpeg says: {line}")
+        try:
+            for line in process.stderr:
+                if msu.is_ffmpeg_update(line):
+                    current_loc = msu.ffmpeg_get_current_time(line)
+                    percent_progress = msu.pretty_progress_with_timer(start_ts, current_loc, duration)
+                    print(f"    Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}    ",
+                          end="\r"
+                          )
+                else:
+                    log.info(f"ffmpeg says: {line}")
+                    # print(f"*** ffmpeg says: {line}")
+        except UnicodeDecodeError:
+            # Trouble parsing text, but video is still ok.
+            duration = 3600
+            pass
 
     if process.returncode != 0:
         current_ffmpeg_index += 1

@@ -7,6 +7,7 @@ import subprocess as proc
 import sys
 
 import msutils as msu
+import transcode_to_hevc as tcode
 
 FFMPEG_FILE = "ffmpeg"
 INPUTS_FILE_NAME = "ffmpeg_inputs_file.txt"
@@ -51,6 +52,7 @@ def remove_gaps(gaps: msu.MovieSections):
                   )
 
     current: float = 0.0
+
     with proc.Popen(ffmpeg_args, text=True, stderr=proc.PIPE) as process:
         for line in process.stderr:
             if msu.is_ffmpeg_update(line):
@@ -254,12 +256,16 @@ def video_gap_removal(file_name: str) -> None:
     except msu.MediaServerUtilityException:
         # Exception should have been logged already.
         return
+    except UnicodeDecodeError:
+        # Mark file as processed.
+        os.setxattr(file_name, f"user.{NO_GAPS_FIELD}", bytes(NO_GAPS_VALUE, "UTF-8"))
+        return
 
     if len(gaps.section_list) > 0:
         remove_gaps(gaps)
         msu.replace_file(file_name,
                          msu.temp_results_file_name(file_name),
-                         [NO_GAPS_FIELD]
+                         [NO_GAPS_FIELD, tcode.TRANSCODED_ATTRIBUTE]
                          )
     else:
         log.info("Found no gaps to remove.")
