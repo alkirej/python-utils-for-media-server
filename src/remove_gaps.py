@@ -265,7 +265,7 @@ def video_gap_removal(file_name: str) -> None:
         remove_gaps(gaps)
         msu.replace_file(file_name,
                          msu.temp_results_file_name(file_name),
-                         [NO_GAPS_FIELD]
+                         [NO_GAPS_FIELD, tcode.TRANSCODED_ATTRIBUTE]
                          )
     else:
         log.info("Found no gaps to remove.")

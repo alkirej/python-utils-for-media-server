@@ -45,7 +45,7 @@ def move_game_video(file_name: str) -> None:
 
 
 def main() -> None:
-    print("Upload and newly recorded Lakers games to plex ...")
+    print("Upload and newly recorded DODGERS games to plex ...")
     os.chdir(GAMES_RECORDED_DIR)
     mkv_files: [str] = glob.glob("*.mkv")
 
