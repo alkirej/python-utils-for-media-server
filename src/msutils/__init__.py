@@ -116,6 +116,10 @@ def replace_file(orig_file_name: str, replace_with_file_name: str, strip_attrs: 
         except PermissionError:
             print("Permission error ... retry one time after 1 minute.")
             time.sleep(65)
+        except Exception as e:
+            log.exception(e)
+            print(f"Exception: {type(e)} --> {e}")
+            raise e
 
     # 3 -> copy file attributes provided by the user
     duplicate_xattrs(backup_file_name, orig_file_name, strip_attrs)

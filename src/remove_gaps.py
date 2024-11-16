@@ -263,10 +263,15 @@ def video_gap_removal(file_name: str) -> None:
 
     if len(gaps.section_list) > 0:
         remove_gaps(gaps)
-        msu.replace_file(file_name,
-                         msu.temp_results_file_name(file_name),
-                         [NO_GAPS_FIELD]
-                         )
+        try:
+            msu.replace_file(file_name,
+                             msu.temp_results_file_name(file_name),
+                             [NO_GAPS_FIELD]
+                             )
+        except FileNotFoundError as fnfe:
+            log.exception(fnfe)
+            log.error(fnfe)
+            return
     else:
         log.info("Found no gaps to remove.")
         print(f"    Found no gaps to remove in {file_name}.")
