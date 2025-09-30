@@ -44,20 +44,29 @@ def create_game_poster_for(file_name: str) -> None:
 
 
 def move_game_video(file_name: str, new_file_name: str) -> None:
-    print(f"file name: {file_name}");
-
     year = get_year_from_game_filename(new_file_name)
-    print(f"year: {year}")
     plex_dir: str = get_plex_dir_for_year(year)
-    print(f"plex dir: {plex_dir}")
     final_game_video_path: str = os.path.join(plex_dir, new_file_name)
     shutil.move(file_name, final_game_video_path)
 
 
 def standardize_filename(orig_fn: str) -> str:
     word: [str] = orig_fn.split()
-    ext: str = word[8][-4:]
-    date: str = word[8][0:-4]
+
+    last: int = len(word)-1
+    home_team: str
+    away_team: str
+
+    if last == 8:
+        home_team = word[4]
+        away_team = word[2]
+
+    else:
+        home_team = f"{word[4]}{word[5]}"
+        away_team = f"{word[2]}{word[3]}"
+
+    ext: str = word[last][-4:]
+    date: str = word[last][0:-4]
     year: str = date[-4:]
     day: str = date[:-4] 
 
@@ -65,10 +74,10 @@ def standardize_filename(orig_fn: str) -> str:
     opponent: str
     if TEAM_NAME == word[2]:
         home_away = "at"
-        opponent = word[4]
+        opponent = home_team
     else:
         home_away = "vs"
-        opponent = word[2]
+        opponent = away_team
 
     return f"{year}{day}{home_away}{opponent}-s{year}e{day}{ext}"
 
