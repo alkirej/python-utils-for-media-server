@@ -3,15 +3,18 @@ import os
 import shutil
 
 TEAM_NAME = "Dodgers"
-FILEMATCH_GLOB = f"*{TEAM_NAME}*"
+# FILEMATCH_GLOB = f"*{TEAM_NAME}*"
+FILEMATCH_GLOB = f"*mkv"
 
-# GAMES_RECORDED_DIR: str = "/home/jeff/Videos/recordings/Dodgers"
-GAMES_RECORDED_DIR: str = "/home/jeff/Downloads"
+GAMES_RECORDED_DIR: str = "/home/jeff/Videos/recordings/Dodgers"
+# GAMES_RECORDED_DIR: str = "/home/jeff/Downloads"
 PLEX_DIR_FOR_GAMES: dict = {"2024": "/nfs/Media-01/media-store/Video/Sports Games/Dodgers/2024",
                             "2025": "/nfs/Media-04/media-store/Video/Sports Games/Dodgers/2025",
+                            "2026": "/nfs/Media-04/media-store/Video/Sports Games/Dodgers/2026",
                             }
 GAME_POSTERS: dict = {"2024": "game-poster.jpg",
                       "2025": "game-poster.jpg",
+                      "2026": "game-poster.jpg",
                       }
 
 
@@ -87,7 +90,7 @@ def main() -> None:
     files_to_update: [str] = glob.glob(FILEMATCH_GLOB)
 
     for fn in files_to_update:
-        new_fn: str = standardize_filename(fn)
+        new_fn: str = fn # standardize_filename(fn)
         fn_wo_ext: str = new_fn[:-4]
         print(f"Moving {fn} to plex ... ", end="", flush=True)
         create_game_poster_for(new_fn)
