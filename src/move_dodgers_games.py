@@ -14,7 +14,7 @@ PLEX_DIR_FOR_GAMES: dict = {"2024": "/nfs/Media-01/media-store/Video/Sports Game
                             }
 GAME_POSTERS: dict = {"2024": "game-poster.jpg",
                       "2025": "game-poster.jpg",
-                      "2026": "game-poster.jpg",
+                      "2026": "game-poster.webp",
                       }
 
 
