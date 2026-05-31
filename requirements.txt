@@ -4,4 +4,5 @@ idna==3.6
 logger==1.4
 PlexAPI==4.15.6
 requests==2.31.0
-urllib3==2.1.0
+urllib3==2.6.0
+

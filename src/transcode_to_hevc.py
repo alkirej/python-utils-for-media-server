@@ -160,6 +160,8 @@ def transcode(file_name: str) -> None:
         return
     if vid_codec is None:
         log.error(f"No video found for {file_name}.  Skipping file.")
+        return
+        # vid_codec = CORRECT_CODEC[0]
 
     if aud_codec is None:
         aud_codec = CORRECT_CODEC
@@ -193,6 +195,7 @@ def transcode(file_name: str) -> None:
 
     pre_transcode_text: [str] = []
     start_ts: dt.datetime = dt.datetime.now()
+   
     with proc.Popen(ffmpeg_args, text=True, stderr=proc.PIPE) as process:
         try:
             pre_transcode_text = msu.ffmpeg_output_before_transcode(process.stderr)

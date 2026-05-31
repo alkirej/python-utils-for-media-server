@@ -9,7 +9,7 @@ import msutils as msu
 from remove_gaps import video_gap_removal
 from transcode_to_hevc import transcode
 
-MAX_RETRIES: int = 10
+MAX_RETRIES: int = 1 # 0
 
 if "__main__" == __name__:
     # SETUP LOGGER BEFORE IMPORTS SO THEY CAN USE THESE SETTINGS
