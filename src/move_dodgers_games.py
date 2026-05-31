@@ -2,10 +2,19 @@ import glob
 import os
 import shutil
 
+TEAM_NAME = "Dodgers"
+# FILEMATCH_GLOB = f"*{TEAM_NAME}*"
+FILEMATCH_GLOB = f"*mkv"
+
 GAMES_RECORDED_DIR: str = "/home/jeff/Videos/recordings/Dodgers"
+# GAMES_RECORDED_DIR: str = "/home/jeff/Downloads"
 PLEX_DIR_FOR_GAMES: dict = {"2024": "/nfs/Media-01/media-store/Video/Sports Games/Dodgers/2024",
+                            "2025": "/nfs/Media-04/media-store/Video/Sports Games/Dodgers/2025",
+                            "2026": "/nfs/Media-04/media-store/Video/Sports Games/Dodgers/2026",
                             }
 GAME_POSTERS: dict = {"2024": "game-poster.jpg",
+                      "2025": "game-poster.jpg",
+                      "2026": "game-poster.webp",
                       }
 
 
@@ -37,26 +46,56 @@ def create_game_poster_for(file_name: str) -> None:
     shutil.copyfile(poster_original_path, final_poster_path)
 
 
-def move_game_video(file_name: str) -> None:
-    year = get_year_from_game_filename(file_name)
+def move_game_video(file_name: str, new_file_name: str) -> None:
+    year = get_year_from_game_filename(new_file_name)
     plex_dir: str = get_plex_dir_for_year(year)
-    final_game_video_path: str = os.path.join(plex_dir, file_name)
+    final_game_video_path: str = os.path.join(plex_dir, new_file_name)
     shutil.move(file_name, final_game_video_path)
 
+
+def standardize_filename(orig_fn: str) -> str:
+    word: [str] = orig_fn.split()
+
+    last: int = len(word)-1
+    home_team: str
+    away_team: str
+
+    if last == 8:
+        home_team = word[4]
+        away_team = word[2]
+
+    else:
+        home_team = f"{word[4]}{word[5]}"
+        away_team = f"{word[2]}{word[3]}"
+
+    ext: str = word[last][-4:]
+    date: str = word[last][0:-4]
+    year: str = date[-4:]
+    day: str = date[:-4] 
+
+    home_away: str
+    opponent: str
+    if TEAM_NAME == word[2]:
+        home_away = "at"
+        opponent = home_team
+    else:
+        home_away = "vs"
+        opponent = away_team
+
+    return f"{year}{day}{home_away}{opponent}-s{year}e{day}{ext}"
 
 def main() -> None:
     print("Upload and newly recorded DODGERS games to plex ...")
     os.chdir(GAMES_RECORDED_DIR)
-    mkv_files: [str] = glob.glob("*.mkv")
+    files_to_update: [str] = glob.glob(FILEMATCH_GLOB)
 
-    for fn in mkv_files:
-        fn_wo_ext: str = fn[:-4]
-        file_count: int = len(glob.glob(f"{fn_wo_ext}.*"))
-        if file_count == 1:
-            print(f"Moving {fn} to plex ... ", end="", flush=True)
-            create_game_poster_for(fn)
-            move_game_video(fn)
-            print("COMPLETE")
+    for fn in files_to_update:
+        new_fn: str = fn # standardize_filename(fn)
+        fn_wo_ext: str = new_fn[:-4]
+        print(f"Moving {fn} to plex ... ", end="", flush=True)
+        create_game_poster_for(new_fn)
+        move_game_video(fn, new_fn)
+        print("COMPLETE")
 
 
 if "__main__" == __name__:
