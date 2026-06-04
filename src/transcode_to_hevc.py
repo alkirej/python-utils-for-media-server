@@ -3,16 +3,21 @@ import logging as log
 import optparse as op
 import os
 import shutil
+
 import subprocess as proc
 import sys
 import typing as typ
 
 import msutils as msu
 
+DEFAULT_FFMPEG_VERSION = "6"
+VALID_FFMPEG_VERSIONS = [ "6", "8" ]
+
 WORK_FILE = "working"
 
-FFMPEG_PROGRAM_LOCS = ["/home/jeff/bin/ffmpeg", "/usr/bin/ffmpeg"]
-current_ffmpeg_index = 0
+FFMPEG_PROGRAM_LOCS = { "6": "/home/jeff/bin/ffmpeg-6",
+                        "8": "/home/jeff/bin/ffmpeg-8",
+                       }
 
 PROPER_VIDEO_CODECS: [str] = ["libx265", "hevc"]
 OTHER_VIDEO_CODECS: [str] = ["h264", "mpeg2video", "mpeg4", "eac3"]
@@ -149,9 +154,7 @@ def determine_new_codecs(file_name: str) -> (str, str, str):
     return video_codec, audio_codec, subtitle_codec
 
 
-def transcode(file_name: str) -> None:
-    global current_ffmpeg_index
-
+def transcode(file_name: str, ffmpeg_version: str, copy_file: bool) -> None:
     assert file_name.endswith(".mp4") or file_name.endswith(".mkv")
     work_file_name: str = f"{WORK_FILE}{file_name[-4:]}"
 
@@ -170,20 +173,26 @@ def transcode(file_name: str) -> None:
         sbt_codec = CORRECT_CODEC
 
     print(f"{msu.Color.BOLD}{msu.Color.BLUE}Transcoding{msu.Color.END} {file_name} to "
-          f"{vid_codec}/{aud_codec}/{sbt_codec} using "
-          f"{msu.Color.CYAN}{FFMPEG_PROGRAM_LOCS[current_ffmpeg_index]}{msu.Color.END}."
+          f"{vid_codec}/{aud_codec}/{sbt_codec} using {FFMPEG_PROGRAM_LOCS[ffmpeg_version] }" 
+          f"{msu.Color.END}."
           )
-    log.debug(f"Transcoding {file_name} to hevc/ac3/{sbt_codec} using {FFMPEG_PROGRAM_LOCS[current_ffmpeg_index]}.")
+    log.debug(f"Transcoding {file_name} to hevc/ac3/{sbt_codec} using {FFMPEG_PROGRAM_LOCS[ffmpeg_version]}.")
 
-    print(f"    Copying {work_file_name} to local disk for faster processing ... ", end="", flush=True)
-    shutil.copy2(file_name, work_file_name)
-    print("COMPLETE")
+    if copy_file:
+        print(f"    Copying {work_file_name} to local disk for faster processing ... ", end="", flush=True)
+        shutil.copy2(file_name, work_file_name)
+        print("COMPLETE")
+        ffmpeg_input_file_name = work_file_name
+
+    else:
+        ffmpeg_input_file_name = file_name
+
     ffmpeg_args: [str] = \
         [
             "nice",
-            FFMPEG_PROGRAM_LOCS[current_ffmpeg_index],
+            FFMPEG_PROGRAM_LOCS[ffmpeg_version],
             "-y",
-            "-i", work_file_name,                # input file
+            "-i", ffmpeg_input_file_name,   # input file
             "-map", "0:v:0",                # Use 1st video stream
             "-map", "0:a?",                 # Keep all audio streams
             "-map", "0:s?",                 # Keep all subtitles
@@ -199,7 +208,7 @@ def transcode(file_name: str) -> None:
     with proc.Popen(ffmpeg_args, text=True, stderr=proc.PIPE) as process:
         try:
             pre_transcode_text = msu.ffmpeg_output_before_transcode(process.stderr)
-            duration: float = msu.find_duration(pre_transcode_text)
+            duration: float = msu.find_duration(pre_transcode_text, ffmpeg_version)
         except msu.MediaServerUtilityException as msue:
             log.error(f"Error during startup of ffmpeg for {file_name}")
             log.exception(msue)
@@ -214,21 +223,18 @@ def transcode(file_name: str) -> None:
                     current_loc = msu.ffmpeg_get_current_time(line)
                     percent_progress = msu.pretty_progress_with_timer(start_ts, current_loc, duration)
                     print(f"    Progress: {msu.Color.BOLD}{msu.Color.GREEN}{percent_progress}{msu.Color.END}    ",
-                          end="\r"
+                          end="\r",
+                          flush=True
                           )
                 else:
                     log.info(f"ffmpeg says: {line}")
-                    # print(f"*** ffmpeg says: {line}")
+
         except UnicodeDecodeError:
             # Trouble parsing text, but video is still ok.
             duration = 3600
             pass
 
     if process.returncode != 0:
-        current_ffmpeg_index += 1
-        if current_ffmpeg_index >= len(FFMPEG_PROGRAM_LOCS):
-            current_ffmpeg_index = 0
-
         for t in pre_transcode_text:
             log.debug(t)
 
@@ -248,30 +254,44 @@ def transcode(file_name: str) -> None:
     log.info(f"... Rename complete.")
 
 
-def walk_dir_transcoding(dir_name: str) -> None:
+def walk_dir_transcoding(dir_name: str, ffmpeg_version: str, copy_file: bool) -> None:
     for (current_dir, dirs, files) in os.walk(dir_name):
         dirs.sort()
         for f in sorted(files):
             if f.endswith(".mp4") or f.endswith(".mkv"):
                 full_path = os.path.join(current_dir, f)
-                transcode(full_path)
+                transcode(full_path, ffmpeg_version, copy_file)
+
+
+def get_ffmpeg_version(options: dict) -> str:
+    if options.ffmpeg_version in VALID_FFMPEG_VERSIONS:
+        return options.ffmpeg_version
+    else:
+        return DEFAULT_FFMPEG_VERSION
 
 
 def main():
     parser = op.OptionParser()
-    _, vals = parser.parse_args()
-    path_to_process: str = vals[0]
+    parser.add_option("-v", "--ffmpeg_version", help="supported versions: 6 and 8", default="6")
+    parser.add_option("-n", "--no_file_copy", help="skip speed up copy locally", default=True, action="store_false", dest="file_copy")
+
+    opts, vals = parser.parse_args()
+    ffmpeg_version = get_ffmpeg_version(opts)
+
+    try:
+        path_to_process: str = vals[0]
+    except IndexError:
+        pass
 
     if len(vals) != 1:
-        print(vals)
-        print("Exactly one argument (file-name/directory) expected.")
-        sys.exit(1)
+           print(f"Exactly one argument (file-name/directory) expected and {len(vals)} were found.")
+           sys.exit(1)
     else:
         if path_to_process.endswith(".mp4") or path_to_process.endswith(".mkv"):
-            transcode(path_to_process)
+                transcode(path_to_process, ffmpeg_version, opts.file_copy)
         else:
             if os.path.isdir(path_to_process):
-                walk_dir_transcoding(path_to_process)
+                walk_dir_transcoding(path_to_process, ffmpeg_version, opts.file_copy)
             else:
                 log.error(f"{path_to_process} is not a valid video file or directory.")
                 print(f"{path_to_process} is not a valid video file or directory.")

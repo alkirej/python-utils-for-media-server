@@ -6,7 +6,7 @@ import shutil as sh
 import subprocess as proc
 import time
 
-from .ffmpeg_utils import run_ffmpeg
+# from .ffmpeg_utils import run_ffmpeg
 from .MediaServerUtilityException import MediaServerUtilityException
 from .MovieSections import MovieSection, MovieSections
 from .MovieChapter import MovieChapter
@@ -156,7 +156,7 @@ def temp_results_file_name(file_name: str) -> str:
     return f"temp-output{extension}"
 
 
-def find_duration(text: [str]) -> float:
+def find_duration(text: [str], ffmpeg_version: str = "6") -> float:
     for line in text:
         if is_ffmpeg_duration_line(line):
             return_val: float = get_ffmpeg_duration(line)
@@ -208,6 +208,9 @@ def pretty_progress(current: float, total: float) -> str:
 
 
 def pretty_progress_with_timer(start_ts: dt.datetime, current: float, total: float) -> str:
+    if current == 0:
+        current=1
+
     current_ts: dt.datetime = dt.datetime.now()
     elapsed_time: dt.timedelta = current_ts - start_ts
     progress: float = 100 * current / total

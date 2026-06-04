@@ -7,7 +7,7 @@ import sys
 
 import msutils as msu
 from remove_gaps import video_gap_removal
-from transcode_to_hevc import transcode
+from transcode_to_hevc import transcode, get_ffmpeg_version
 
 MAX_RETRIES: int = 1 # 0
 
@@ -21,7 +21,7 @@ if "__main__" == __name__:
     log.getLogger().setLevel(log.DEBUG)
 
 
-def process_single_file(file_name: str) -> None:
+def process_single_file(file_name: str, ffmpeg_version: str) -> None:
     current_timestamp: dt.datetime = dt.datetime.now()
     print(f"{msu.Color.OVERLINE}{msu.Color.UNDERLINE}{msu.Color.BOLD}{current_timestamp.strftime('%m/%d/%Y')} "
           f"{msu.Color.BOLD}{msu.Color.PURPLE}{current_timestamp.strftime('%H:%M:%S')} "
@@ -35,7 +35,7 @@ def process_single_file(file_name: str) -> None:
     shutil.move(file_name, clean_file_name)
     while not success and retry_count <= MAX_RETRIES:
         try:
-            transcode(clean_file_name)
+            transcode(clean_file_name, ffmpeg_version, True)
             video_gap_removal(clean_file_name)
             success = True
 
@@ -56,30 +56,35 @@ def process_single_file(file_name: str) -> None:
                       )
 
 
-def process_dir_tree(dir_name: str) -> None:
+def process_dir_tree(dir_name: str, ffmpeg_version: str) -> None:
     for (current_dir, dirs, files) in os.walk(dir_name):
         dirs.sort()
         for f in sorted(files):
             if f.endswith(".mp4") or f.endswith(".mkv"):
                 full_path = os.path.join(current_dir, f)
-                process_single_file(full_path)
+                process_single_file(full_path, ffmpeg_version)
 
 
 def main():
     parser = op.OptionParser()
-    _, vals = parser.parse_args()
-    path_to_process: str = vals[0]
+    parser.add_option("-v", "--ffmpeg_version", help="supported versions are 6 and 8", default="6")
+    opts, vals = parser.parse_args()
+    ffmpeg_version = get_ffmpeg_version(opts)
+
+    try:
+        path_to_process: str = vals[0]
+    except IndexError:
+        pass
 
     if len(vals) != 1:
-        print(vals)
         print("Exactly one argument (file-name/directory) expected.")
         sys.exit(1)
     else:
         if path_to_process.endswith(".mp4") or path_to_process.endswith(".mkv"):
-            process_single_file(path_to_process)
+            process_single_file(path_to_process, ffmpeg_version)
         else:
             if os.path.isdir(path_to_process):
-                process_dir_tree(path_to_process)
+                process_dir_tree(path_to_process, ffmpeg_version)
             else:
                 log.error(f"{path_to_process} is not a valid video file or directory.")
                 print(f"{path_to_process} is not a valid video file or directory.")
