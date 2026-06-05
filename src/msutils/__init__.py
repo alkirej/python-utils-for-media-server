@@ -6,7 +6,7 @@ import shutil as sh
 import subprocess as proc
 import time
 
-# from .ffmpeg_utils import run_ffmpeg
+from .ffmpeg_utils import run_ffmpeg
 from .MediaServerUtilityException import MediaServerUtilityException
 from .MovieSections import MovieSection, MovieSections
 from .MovieChapter import MovieChapter
