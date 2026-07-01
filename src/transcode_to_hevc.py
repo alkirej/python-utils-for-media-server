@@ -10,7 +10,7 @@ import typing as typ
 
 import msutils as msu
 
-DEFAULT_FFMPEG_VERSION = "6"
+DEFAULT_FFMPEG_VERSION = "8"
 VALID_FFMPEG_VERSIONS = [ "6", "8" ]
 
 WORK_FILE = "working"
@@ -22,7 +22,7 @@ FFMPEG_PROGRAM_LOCS = { "6": "/home/jeff/bin/ffmpeg-6",
 PROPER_VIDEO_CODECS: [str] = ["libx265", "hevc"]
 OTHER_VIDEO_CODECS: [str] = ["h264", "mpeg2video", "mpeg4", "eac3"]
 PROPER_AUDIO_CODECS: [str] = ["ac3"]
-OTHER_AUDIO_CODECS: [str] = ["aac", "vorbis", "pcm_s16le", "mp3"]
+OTHER_AUDIO_CODECS: [str] = ["aac", "vorbis", "pcm_s16le", "mp3", "dts"]
 TEXT_SUBTITLE_CODECS: [str] = ["mov_text", "srt", "subrip", "ass"]
 PROPER_SUBTITLE_CODECS: [str] = ["mov_text"]
 GRAPHIC_SUBTITLE_CODECS: [str] = ["dvd_subtitle", "vobsub"]
@@ -122,7 +122,7 @@ def determine_new_codecs(file_name: str) -> (str, str, str):
             elif c in OTHER_VIDEO_CODECS:
                 video_codec = VIDEO_CODEC
 
-        if audio_codec is None:
+        if audio_codec is None or audio_codec == CORRECT_CODEC:
             if c in PROPER_AUDIO_CODECS:
                 audio_codec = CORRECT_CODEC
             elif c in OTHER_AUDIO_CODECS:
@@ -272,7 +272,7 @@ def get_ffmpeg_version(options: dict) -> str:
 
 def main():
     parser = op.OptionParser()
-    parser.add_option("-v", "--ffmpeg_version", help="supported versions: 6 and 8", default="6")
+    parser.add_option("-v", "--ffmpeg_version", help="supported versions: 6 and 8", default="8")
     parser.add_option("-n", "--no_file_copy", help="skip speed up copy locally", default=True, action="store_false", dest="file_copy")
 
     opts, vals = parser.parse_args()
