@@ -153,16 +153,18 @@ def look_for_freezes_and_progress(file_name: str, output, duration: float = 0.0)
                 current_freeze_start = start_f
             elif end_f is not None:
                 if current_freeze_start is None:
-                    raise msu.MediaServerUtilityException(f"Freeze end without a start.")
-
-                # FREEZE END DATA RECEIVED
-                freeze_info: msu.MovieSection = msu.MovieSection(current_freeze_start,
-                                                                 end_f,
-                                                                 f"{current_freeze_start}-{end_f}"
-                                                                 )
-                found_video_freezes.add_section(freeze_info)
-                log.debug(f"Freeze found from {current_freeze_start} to {end_f}")
-                current_freeze_start = None
+                    # unexpected, but not fatal state.
+                    log.debug(ffmpeg_output)
+                    # raise msu.MediaServerUtilityException(f"Freeze end without a start.")
+                else:
+                    # FREEZE END DATA RECEIVED
+                    freeze_info: msu.MovieSection = msu.MovieSection(current_freeze_start,
+                                                                     end_f,
+                                                                     f"{current_freeze_start}-{end_f}"
+                                                                     )
+                    found_video_freezes.add_section(freeze_info)
+                    log.debug(f"Freeze found from {current_freeze_start} to {end_f}")
+                    current_freeze_start = None
 
         elif is_silence_data(ffmpeg_output):
             (start_s, end_s) = process_silence_output(ffmpeg_output)
