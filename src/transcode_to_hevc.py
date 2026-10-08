@@ -192,13 +192,14 @@ def transcode(file_name: str, ffmpeg_version: str, copy_file: bool) -> None:
             "nice",
             FFMPEG_PROGRAM_LOCS[ffmpeg_version],
             "-y",
-            "-i", ffmpeg_input_file_name,   # input file
-            "-map", "0:v:0",                # Use 1st video stream
-            "-map", "0:a?",                 # Keep all audio streams
-            "-map", "0:s?",                 # Keep all subtitles
-            "-c:v", vid_codec,              # video codec (hevc/h.265)
-            "-c:a", aud_codec,              # audio codec (ac3)
-            "-c:s", sbt_codec,              # subtitle codec (matches original)
+            "-i", ffmpeg_input_file_name,     # input file
+            "-map", "0:v:0",                  # Use 1st video stream
+            "-map", "0:a?",                   # Keep all audio streams
+            "-metadata:s:a:0", "title=Audio", # Label Audio Stream
+            "-map", "0:s?",                   # Keep all subtitles
+            "-c:v", vid_codec,                # video codec (hevc/h.265)
+            "-c:a", aud_codec,                # audio codec (ac3)
+            "-c:s", sbt_codec,                # subtitle codec (matches original)
             msu.temp_results_file_name(file_name),
         ]
 
