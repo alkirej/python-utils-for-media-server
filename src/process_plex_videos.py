@@ -7,7 +7,7 @@ import sys
 
 import msutils as msu
 from remove_gaps import video_gap_removal
-from transcode_to_hevc import transcode, get_ffmpeg_version
+from transcode_to_hevc import transcode, get_ffmpeg_version, EXTENSIONS_TO_PROCESS
 
 MAX_RETRIES: int = 1 # 0
 
@@ -60,7 +60,7 @@ def process_dir_tree(dir_name: str, ffmpeg_version: str) -> None:
     for (current_dir, dirs, files) in os.walk(dir_name):
         dirs.sort()
         for f in sorted(files):
-            if f.endswith(".mp4") or f.endswith(".mkv"):
+            if f.endswith( EXTENSIONS_TO_PROCESS ):
                 full_path = os.path.join(current_dir, f)
                 process_single_file(full_path, ffmpeg_version)
 

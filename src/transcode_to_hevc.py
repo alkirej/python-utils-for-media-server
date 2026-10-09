@@ -10,6 +10,8 @@ import typing as typ
 
 import msutils as msu
 
+EXTENSIONS_TO_PROCESS = ( ".mkv", ".mp4" )
+
 DEFAULT_FFMPEG_VERSION = "8"
 VALID_FFMPEG_VERSIONS = [ "6", "8" ]
 
@@ -155,7 +157,7 @@ def determine_new_codecs(file_name: str) -> (str, str, str):
 
 
 def transcode(file_name: str, ffmpeg_version: str, copy_file: bool) -> None:
-    assert file_name.endswith(".mp4") or file_name.endswith(".mkv")
+    assert file_name.endswith( EXTENSIONS_TO_PROCESS )
     work_file_name: str = f"{WORK_FILE}{file_name[-4:]}"
 
     (vid_codec, aud_codec, sbt_codec) = determine_new_codecs(file_name)
