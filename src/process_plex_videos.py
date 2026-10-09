@@ -67,7 +67,7 @@ def process_dir_tree(dir_name: str, ffmpeg_version: str) -> None:
 
 def main():
     parser = op.OptionParser()
-    parser.add_option("-v", "--ffmpeg_version", help="supported versions are 6 and 8", default="6")
+    parser.add_option("-v", "--ffmpeg_version", help="supported versions are 6 and 8", default="8")
     parser.add_option("-c", "--combine", help="Combine all arguments into single file name", default=False, action="store_true", dest="combine")
 
     opts, vals = parser.parse_args()
