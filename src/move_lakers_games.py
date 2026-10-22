@@ -22,7 +22,7 @@ PLEX_DIR_FOR_GAMES: dict = {"1962": "/nfs/Media-01/media-store/Video/Sports Game
                             "2024": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2023-24",
                             "2025": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2024-25",
                             "2026": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2025-26",
-                            "2027": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2025-27",
+                            "2027": "/nfs/Media-04/media-store/Video/Sports Games/Lakers/2026-27",
                             }
 GAME_POSTERS: dict = {"1962": "game-poster.webp",
                       "1964": "game-poster.webp",
