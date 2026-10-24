@@ -21,7 +21,7 @@ if "__main__" == __name__:
     log.getLogger().setLevel(log.DEBUG)
 
 
-def process_single_file(file_name: str, ffmpeg_version: str) -> None:
+def process_single_file(file_name: str, ffmpeg_version: str, copy_file: bool = True) -> None:
     current_timestamp: dt.datetime = dt.datetime.now()
     print(f"{msu.Color.OVERLINE}{msu.Color.UNDERLINE}{msu.Color.BOLD}{current_timestamp.strftime('%m/%d/%Y')} "
           f"{msu.Color.BOLD}{msu.Color.PURPLE}{current_timestamp.strftime('%H:%M:%S')} "
@@ -35,7 +35,7 @@ def process_single_file(file_name: str, ffmpeg_version: str) -> None:
     shutil.move(file_name, clean_file_name)
     while not success and retry_count <= MAX_RETRIES:
         try:
-            transcode(clean_file_name, ffmpeg_version, True)
+            transcode(clean_file_name, ffmpeg_version, copy_file)
             video_gap_removal(clean_file_name)
             success = True
 
@@ -56,19 +56,20 @@ def process_single_file(file_name: str, ffmpeg_version: str) -> None:
                       )
 
 
-def process_dir_tree(dir_name: str, ffmpeg_version: str) -> None:
+def process_dir_tree(dir_name: str, ffmpeg_version: str, file_copy: bool = True) -> None:
     for (current_dir, dirs, files) in os.walk(dir_name):
         dirs.sort()
         for f in sorted(files):
             if f.endswith( EXTENSIONS_TO_PROCESS ):
                 full_path = os.path.join(current_dir, f)
-                process_single_file(full_path, ffmpeg_version)
+                process_single_file(full_path, ffmpeg_version, file_copy)
 
 
 def main():
     parser = op.OptionParser()
     parser.add_option("-v", "--ffmpeg_version", help="supported versions are 6 and 8", default="8")
     parser.add_option("-c", "--combine", help="Combine all arguments into single file name", default=False, action="store_true", dest="combine")
+    parser.add_option("-n", "--no_file_copy", help="skip speed up copy locally", default=True, action="store_false", dest="file_copy")
 
     opts, vals = parser.parse_args()
     ffmpeg_version = get_ffmpeg_version(opts)
@@ -86,10 +87,10 @@ def main():
         sys.exit(1)
     else:
         if path_to_process.endswith(".mp4") or path_to_process.endswith(".mkv"):
-            process_single_file(path_to_process, ffmpeg_version)
+            process_single_file(path_to_process, ffmpeg_version, opts.file_copy)
         else:
             if os.path.isdir(path_to_process):
-                process_dir_tree(path_to_process, ffmpeg_version)
+                process_dir_tree(path_to_process, ffmpeg_version, opts.file_copy)
             else:
                 log.error(f"{path_to_process} is not a valid video file or directory.")
                 print(f"{path_to_process} is not a valid video file or directory.")

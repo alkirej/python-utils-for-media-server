@@ -26,7 +26,8 @@ OTHER_VIDEO_CODECS: [str] = ["h264", "mpeg2video", "mpeg4", "eac3"]
 PROPER_AUDIO_CODECS: [str] = ["ac3"]
 OTHER_AUDIO_CODECS: [str] = ["aac", "vorbis", "pcm_s16le", "mp3", "dts"]
 TEXT_SUBTITLE_CODECS: [str] = ["mov_text", "srt", "subrip", "ass"]
-PROPER_SUBTITLE_CODECS: [str] = ["mov_text"]
+PROPER_SUBTITLE_CODECS_MP4: [str] = ["mov_text"]
+PROPER_SUBTITLE_CODECS_MKV: [str] = ["srt"]
 GRAPHIC_SUBTITLE_CODECS: [str] = ["dvd_subtitle", "vobsub"]
 CODECS_TO_IGNORE: [str] = ["bin_data", "png", ""]
 
@@ -34,7 +35,6 @@ TRANSCODED_ATTRIBUTE: str = "transcoded_to_hevc"
 
 VIDEO_CODEC = PROPER_VIDEO_CODECS[0]
 AUDIO_CODEC = PROPER_AUDIO_CODECS[0]
-SUBTITLE_CODEC = PROPER_SUBTITLE_CODECS[0]
 CORRECT_CODEC = "copy"
 
 if "__main__" == __name__:
@@ -97,6 +97,12 @@ def determine_new_codecs(file_name: str) -> (str, str, str):
         log.debug(f"{file_name} was previously transcoded and marked as such.")
         return CORRECT_CODEC, CORRECT_CODEC, CORRECT_CODEC
 
+    ext: str = file_name[-4:]
+    if ".mp4" == ext: 
+        correct_subtitle_codec: bool = PROPER_SUBTITLE_CODECS_MP4[0]
+    else:
+        correct_subtitle_codec: bool = PROPER_SUBTITLE_CODECS_MKV[0]
+
     # CHECK IF PROPER CODECS ARE PRESENT IN THE VIDEO FILE.
     video_codec: typ.Optional[str] = None
     audio_codec: typ.Optional[str] = None
@@ -134,10 +140,10 @@ def determine_new_codecs(file_name: str) -> (str, str, str):
             if c in GRAPHIC_SUBTITLE_CODECS:
                 subtitle_codec = CORRECT_CODEC
             elif c in TEXT_SUBTITLE_CODECS:
-                if c == subtitle_codec:
+                if c == correct_subtitle_codec:
                     subtitle_codec = CORRECT_CODEC
                 else:
-                    subtitle_codec = SUBTITLE_CODEC
+                    subtitle_codec = correct_subtitle_codec
 
     prev_transcoded: bool = video_codec == CORRECT_CODEC and audio_codec == CORRECT_CODEC
     if prev_transcoded:
@@ -160,7 +166,7 @@ def transcode(file_name: str, ffmpeg_version: str, copy_file: bool) -> None:
     assert file_name.endswith( EXTENSIONS_TO_PROCESS )
     work_file_name: str = f"{WORK_FILE}{file_name[-4:]}"
 
-    (vid_codec, aud_codec, sbt_codec) = determine_new_codecs(file_name)
+    (vid_codec, aud_codec, srt_codec) = determine_new_codecs(file_name)
     if vid_codec == CORRECT_CODEC and aud_codec == CORRECT_CODEC:
         return
     if vid_codec is None:
@@ -171,14 +177,14 @@ def transcode(file_name: str, ffmpeg_version: str, copy_file: bool) -> None:
     if aud_codec is None:
         aud_codec = CORRECT_CODEC
 
-    if sbt_codec is None:
-        sbt_codec = CORRECT_CODEC
+    if srt_codec is None:
+        srt_codec = CORRECT_CODEC
 
     print(f"{msu.Color.BOLD}{msu.Color.BLUE}Transcoding{msu.Color.END} {file_name} to "
-          f"{vid_codec}/{aud_codec}/{sbt_codec} using {FFMPEG_PROGRAM_LOCS[ffmpeg_version] }" 
+          f"{vid_codec}/{aud_codec}/{srt_codec} using {FFMPEG_PROGRAM_LOCS[ffmpeg_version] }" 
           f"{msu.Color.END}."
           )
-    log.debug(f"Transcoding {file_name} to hevc/ac3/{sbt_codec} using {FFMPEG_PROGRAM_LOCS[ffmpeg_version]}.")
+    log.debug(f"Transcoding {file_name} to hevc/ac3/{srt_codec} using {FFMPEG_PROGRAM_LOCS[ffmpeg_version]}.")
 
     if copy_file:
         print(f"    Copying {work_file_name} to local disk for faster processing ... ", end="", flush=True)
@@ -199,15 +205,16 @@ def transcode(file_name: str, ffmpeg_version: str, copy_file: bool) -> None:
             "-map", "0:a?",                   # Keep all audio streams
             "-metadata:s:a:0", "title=Audio", # Label Audio Stream
             "-map", "0:s?",                   # Keep all subtitles
+            "-map", "0:d?",                   # Keep all digital data
             "-c:v", vid_codec,                # video codec (hevc/h.265)
             "-c:a", aud_codec,                # audio codec (ac3)
-            "-c:s", sbt_codec,                # subtitle codec (matches original)
+            "-c:s", srt_codec,                # subtitle codec (matches original)
             msu.temp_results_file_name(file_name),
         ]
 
     pre_transcode_text: [str] = []
     start_ts: dt.datetime = dt.datetime.now()
-   
+ 
     with proc.Popen(ffmpeg_args, text=True, stderr=proc.PIPE) as process:
         try:
             pre_transcode_text = msu.ffmpeg_output_before_transcode(process.stderr)
